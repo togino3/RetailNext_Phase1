@@ -55,7 +55,7 @@ def extract_color_vector_from_PIL(pil_image):
     arr = np.array(image).reshape(-1, 3)
     return np.mean(arr, axis=0)
 
-def find_similar_images_from_PIL(pil_image, target_gender, top_k=5):
+def find_similar_images_from_PIL(pil_image, target_gender, top_k=3):
     base_rgb = np.array(pil_image.resize((64, 64)).convert("RGB"))
     center_rgb = base_rgb[16:48, 16:48].reshape(-1, 3)
     mean_rgb = np.mean(center_rgb, axis=0)
@@ -142,7 +142,7 @@ Generate a full-body anime-style fashion coordination image for one person, base
         cols = st.columns(5)
         for i, url in enumerate(similar_images):
             with cols[i % 5]:
-                st.image(url, use_column_width=True)
+                st.image(url, use_container_width=True)
                 st.markdown(f"[🛒 Add to Cart](#)", unsafe_allow_html=True)
 
         save_post({
