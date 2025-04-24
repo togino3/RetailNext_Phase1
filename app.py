@@ -57,7 +57,7 @@ def extract_color_vector(image_url):
     except:
         return [0, 0, 0]
 
-def find_similar_images_fast(generated_url, color_features, top_k=3):
+def find_similar_images_fast(generated_url, color_features, top_k=10):
     base_vec = extract_color_vector(generated_url)
     similarities = []
     for filename, vec in color_features.items():
@@ -83,7 +83,7 @@ with tab1:
         age = st.slider("年齢", 1, 100, 25)
         body_shape = st.selectbox("体型", ["スリム", "標準", "ぽっちゃり"])
         favorite_color = st.text_input("🎨 好きな色（例：black, pink など）")
-        anime_style = st.selectbox("アニメスタイル", ["ディズニー", "アメリカンコミック", "日本", "CG"])
+        drawing_style = st.selectbox("作画スタイル", ["手描き風（日本）", "ディズニー風", "アメコミ風", "CGスタイル"])
         fashion_theme = st.text_input("🧵 ファッションテーマ（例：春っぽく、明るく）")
         submitted = st.form_submit_button("✨ AIコーディネート生成")
 
@@ -102,12 +102,12 @@ with tab1:
 ・体型: {body_shape}
 ・好きな色: {favorite_color}
 ・ファッションテーマ: {fashion_theme}
-・アニメスタイル: {anime_style}
+・作画スタイル: {drawing_style}
 
 出力画像の条件：
 - 背景は白
 - 人物とファッションが中心
-- 顔はアニメスタイルで自然、目立ちすぎない
+- 顔は自然で目立ちすぎず、{drawing_style}の作画スタイルで描かれている
 """
 
         response = client.images.generate(
@@ -124,7 +124,7 @@ with tab1:
         color_features = load_color_features()
         similar_images = find_similar_images_fast(image_url, color_features)
         for url in similar_images:
-            st.image(url, width=200)
+            st.image(url, width=100)
             st.markdown(f"[🛒 カートに追加（ダミー）](#)", unsafe_allow_html=True)
 
         save_post({
