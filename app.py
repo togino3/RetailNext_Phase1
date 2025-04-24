@@ -150,7 +150,6 @@ Generate a full-body anime-style fashion coordination image for one person, base
 # 🌐 Community Gallery
 # -----------------------
 with tab2:
-    st.header("🌐 Community Gallery")
 
     posts = load_posts()
     top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
