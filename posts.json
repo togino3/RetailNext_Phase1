@@ -6,7 +6,7 @@
       "gender": "Male",
       "age": 25,
       "body_shape": "Slim",
-      "color": "Bule",
+      "color": "Blue",
       "theme": "Cafe",
       "style": "Japanese",
       "likes": 175
@@ -45,7 +45,7 @@
       "color": "Yellow",
       "theme": "Shopping",
       "style": "American Comic",
-      "likes": 167
+      "likes": 181
     },
     {
       "id": "5",
