@@ -46,7 +46,7 @@ def load_feature_vectors():
     with open(FEATURES_FILE, "r") as f:
         data = json.load(f)
     for item in data:
-        item["vector"] = np.array(item["vector"])
+        item["feature_vector"] = np.array(item["feature_vector"])  # ✅ 修正ポイント
     return data
 
 # --- 類似画像推薦用：PILベースのベクトル抽出 ---
@@ -55,19 +55,23 @@ def extract_color_vector_from_PIL(pil_image):
     arr = np.array(image).reshape(-1, 3)
     return np.mean(arr, axis=0)
 
-def find_similar_images_from_PIL(pil_image, target_gender, target_category, top_k=3):
-    base_vec = extract_color_vector_from_PIL(pil_image)
+def find_similar_images_from_PIL(pil_image, target_gender, top_k=3):
+    base_rgb = np.array(pil_image.resize((64, 64)).convert("RGB"))
+    center_rgb = base_rgb[16:48, 16:48].reshape(-1, 3)
+    mean_rgb = np.mean(center_rgb, axis=0)
+    
     features = load_feature_vectors()
     similarities = []
+
     for item in features:
-        if item["gender"] != target_gender or item["category"] != target_category:
+        if item["gender"] != target_gender:
             continue
-        vec = item["vector"]
-        sim = cosine_similarity([base_vec], [vec])[0][0]
+        vec = np.array(item["feature_vector"])
+        sim = cosine_similarity([mean_rgb], [vec[3:]])[0][0]
         full_url = SAMPLE_IMAGES_URL + item["filename"]
         similarities.append((sim, full_url))
-    return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
+    return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
 # --- Tab Layout ---
 tab1, tab2 = st.tabs(["🧠 AI Coordinator", "🌐 Community Gallery"])
@@ -134,7 +138,7 @@ Generate a full-body anime-style fashion coordination image for one person, base
         # --- 類似アイテム推薦 ---
         category = "Top" if "shirt" in fashion_theme.lower() or "top" in fashion_theme.lower() else "Bottom"
         st.subheader("🛍 Similar Items")
-        similar_images = find_similar_images_from_PIL(dalle_image, gender, category)
+        similar_images = find_similar_images_from_PIL(dalle_image, gender)
         for url in similar_images:
             st.image(url, width=200)
             st.markdown(f"[🛒 Add to Cart](#)", unsafe_allow_html=True)
