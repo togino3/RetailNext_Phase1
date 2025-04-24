@@ -15,6 +15,7 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 POSTS_FILE = "posts.json"
 FEATURES_FILE = "features.json"
+SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
 
 if not os.path.exists(POSTS_FILE):
     with open(POSTS_FILE, "w") as f:
@@ -41,13 +42,10 @@ def like_post(post_id):
 @st.cache_data
 def load_feature_vectors():
     with open(FEATURES_FILE, "r") as f:
-        raw_data = json.load(f)
-
-    # 各要素の "vector" を NumPy 配列に変換して返す
-    for item in raw_data:
+        data = json.load(f)
+    for item in data:
         item["vector"] = np.array(item["vector"])
-
-    return raw_data
+    return data
 
 def extract_color_vector(image_url):
     try:
@@ -57,16 +55,13 @@ def extract_color_vector(image_url):
     except:
         return np.array([0, 0, 0])
 
-
-SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
-
-def find_similar_images_with_gender(image_url, target_gender, top_k=3):
+def find_similar_images(image_url, target_gender, target_category, top_k=3):
     base_vec = extract_color_vector(image_url)
     features = load_feature_vectors()
     similarities = []
 
     for item in features:
-        if item["gender"] != target_gender:
+        if item["gender"] != target_gender or item["category"] != target_category:
             continue
         vec = item["vector"]
         sim = cosine_similarity([base_vec], [vec])[0][0]
@@ -74,7 +69,6 @@ def find_similar_images_with_gender(image_url, target_gender, top_k=3):
         similarities.append((sim, image_url))
 
     return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
-
 
 # --- タブ構成 ---
 tab1, tab2 = st.tabs(["🧠 コーデ診断", "🌐 みんなのコーデ + ランキング"])
@@ -101,7 +95,6 @@ with tab1:
         buffered = BytesIO()
         image.save(buffered, format="PNG")
         img_bytes = buffered.getvalue()
-
 
         user_prompt = f"""
 以下の条件に基づいて、人物が全身で1人で写っている作画スタイルのファッションコーディネート画像を生成してください：
@@ -130,9 +123,10 @@ with tab1:
         image_url = response.data[0].url
         st.image(image_url, caption="👕 AIコーデ提案", use_container_width=True)
 
-        # 類似商品（色＋性別ベース）
+        # 類似商品（色＋性別＋カテゴリベース）
         st.subheader("🛍 類似商品")
-        similar_images = find_similar_images_with_gender(image_url, gender)
+        category = "トップス" if "シャツ" in fashion_theme or "トップス" in fashion_theme else "ボトムス"  # 仮判定ロジック
+        similar_images = find_similar_images(image_url, gender, category)
         for url in similar_images:
             st.image(url, width=200)
             st.markdown(f"[🛒 カートに追加（ダミー）](#)", unsafe_allow_html=True)
@@ -149,6 +143,7 @@ with tab1:
             "likes": 0
         })
         st.success("👚 コーデ画像をコミュニティに投稿しました！")
+
 
 # ------------------------
 # 🌐 みんなのコーデ + ランキング
@@ -182,4 +177,3 @@ with tab2:
                 if st.button(f"👍 いいねする", key=post["id"]):
                     like_post(post["id"])
                     st.experimental_rerun()
-
