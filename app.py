@@ -71,7 +71,7 @@ def find_similar_images(image_url, target_gender, target_category, top_k=3):
     return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
 # --- タブ構成 ---
-tab1, tab2 = st.tabs(["🧠 コーデ診断", "🌐 みんなのコーデ + ランキング"])
+tab1, tab2 = st.tabs(["🧠 コーデ診断", "🌐 みんなのコーディネート"])
 
 # ------------------------
 # 🧠 コーデ診断
