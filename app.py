@@ -10,12 +10,18 @@ import uuid
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
+# --- APIキー ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
+# --- ページ設定 ---
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
+
+# --- 定数 ---
 POSTS_FILE = "posts.json"
+COLOR_FEATURES_FILE = "color_features.json"
 SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
 
+# --- JSONファイル初期化 ---
 if not os.path.exists(POSTS_FILE):
     with open(POSTS_FILE, "w") as f:
         json.dump([], f)
@@ -38,34 +44,34 @@ def like_post(post_id):
     with open(POSTS_FILE, "w") as f:
         json.dump(posts, f, indent=2)
 
-def fetch_github_image_list():
-    url = "https://api.github.com/repos/openai/openai-cookbook/contents/examples/data/sample_clothes/sample_images"
-    response = requests.get(url)
-    data = response.json()
-    return [SAMPLE_IMAGES_URL + item['name'] for item in data if item['name'].endswith('.jpg')]
+@st.cache_data
+def load_color_features():
+    with open(COLOR_FEATURES_FILE, "r") as f:
+        return json.load(f)
 
 def extract_color_vector(image_url):
     try:
         image = Image.open(BytesIO(requests.get(image_url).content)).resize((32, 32))
         arr = np.array(image).reshape(-1, 3)
-        return np.mean(arr, axis=0)
+        return np.mean(arr, axis=0).tolist()
     except:
-        return np.array([0, 0, 0])
+        return [0, 0, 0]
 
-def find_similar_images(generated_url, image_urls, top_k=3):
+def find_similar_images_fast(generated_url, color_features, top_k=3):
     base_vec = extract_color_vector(generated_url)
     similarities = []
-    for img_url in image_urls:
-        vec = extract_color_vector(img_url)
+    for filename, vec in color_features.items():
         sim = cosine_similarity([base_vec], [vec])[0][0]
+        img_url = SAMPLE_IMAGES_URL + filename
         similarities.append((sim, img_url))
     return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
-# --- タブ ---
+# --- UI ---
 tab1, tab2 = st.tabs(["🧠 コーデ診断", "🌐 みんなのコーデ + ランキング"])
 
+
 # ------------------------
-# 🧠 コーデ診断
+# 🧠 コーデ診断タブ
 # ------------------------
 with tab1:
     st.title("🌟 RetailNext Coordinator")
@@ -114,10 +120,9 @@ with tab1:
         image_url = response.data[0].url
         st.image(image_url, caption="👕 AIコーデ提案", use_container_width=True)
 
-        # 類似商品
         st.subheader("🛍 類似商品")
-        github_images = fetch_github_image_list()
-        similar_images = find_similar_images(image_url, github_images)
+        color_features = load_color_features()
+        similar_images = find_similar_images_fast(image_url, color_features)
         for url in similar_images:
             st.image(url, width=200)
             st.markdown(f"[🛒 カートに追加（ダミー）](#)", unsafe_allow_html=True)
@@ -133,7 +138,10 @@ with tab1:
             "theme": fashion_theme,
             "likes": 0
         })
+
         st.success("👚 コーデ画像をコミュニティに投稿しました！")
+
+
 
 # ------------------------
 # 🌐 みんなのコーデ + ランキング
@@ -141,8 +149,7 @@ with tab1:
 with tab2:
     st.header("🔥 上位ランキング")
 
-    posts = load_posts()  # ← これを top_posts より前に！
-
+    posts = load_posts()
     top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
 
     if not top_posts:
@@ -168,5 +175,3 @@ with tab2:
                 if st.button(f"👍 いいねする", key=post["id"]):
                     like_post(post["id"])
                     st.experimental_rerun()
-
- 
