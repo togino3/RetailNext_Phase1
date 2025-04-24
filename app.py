@@ -61,9 +61,12 @@ def find_similar_images(generated_url, image_urls, top_k=3):
         similarities.append((sim, img_url))
     return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
-# --- UI構成 ---
-tab1, tab2, tab3 = st.tabs(["🧠 コーデ診断", "🌐 みんなのコーデ", "🔥 人気ランキング"])
+# --- タブ ---
+tab1, tab2 = st.tabs(["🧠 コーデ診断", "🌐 みんなのコーデ + ランキング"])
 
+# ------------------------
+# 🧠 コーデ診断
+# ------------------------
 with tab1:
     st.title("🌟 RetailNext Coordinator")
 
@@ -85,22 +88,20 @@ with tab1:
         img_bytes = buffered.getvalue()
 
         user_prompt = f"""
-以下の条件に基づいて、1人の人物が全身で写っているアニメスタイルのファッションコーディネート画像を生成してください。
+以下の条件に基づいて、1人の人物が全身で写っているアニメスタイルのファッションコーディネート画像を生成してください：
 
-【条件】
-- 国: {country}
-- 性別: {gender}
-- 年齢: {age}歳
-- 体型: {body_shape}
-- 好きな色: {favorite_color}
-- ファッションテーマ: {fashion_theme}
-- アニメスタイル: {anime_style}
+・国: {country}
+・性別: {gender}
+・年齢: {age}歳
+・体型: {body_shape}
+・好きな色: {favorite_color}
+・ファッションテーマ: {fashion_theme}
+・アニメスタイル: {anime_style}
 
-【出力条件】
-- 人物は1人で、全身が映っていること
+出力画像の条件：
 - 背景は白
-- ファッションと人物が中心になるように
-- 顔はアニメスタイルで自然に、目立ちすぎない
+- 人物とファッションが中心
+- 顔はアニメスタイルで自然、目立ちすぎない
 """
 
         response = client.images.generate(
@@ -113,6 +114,7 @@ with tab1:
         image_url = response.data[0].url
         st.image(image_url, caption="👕 AIコーデ提案", use_container_width=True)
 
+        # 類似商品
         st.subheader("🛍 類似商品")
         github_images = fetch_github_image_list()
         similar_images = find_similar_images(image_url, github_images)
@@ -131,8 +133,21 @@ with tab1:
             "theme": fashion_theme,
             "likes": 0
         })
+        st.success("👚 コーデ画像をコミュニティに投稿しました！")
 
+# ------------------------
+# 🌐 みんなのコーデ + ランキング
+# ------------------------
 with tab2:
+    st.markdown("---")
+    st.header("🔥 上位ランキング")
+    top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
+    for i, post in enumerate(top_posts):
+        with st.container():
+            st.subheader(f"#{i+1}　❤️ {post['likes']} Likes")
+            st.image(post["image_url"], use_container_width=True)
+            st.markdown(f"🧵 テーマ: `{post['theme']}` 🎨 色: `{post['color']}` 👕 スタイル: `{post['style']}`")
+      
     st.header("🌐 みんなのコーデ")
 
     posts = load_posts()
@@ -142,21 +157,10 @@ with tab2:
         for post in reversed(posts):
             with st.container():
                 st.image(post["image_url"], caption=f"{post['country']} / {post['gender']} / {post['age']}歳", use_container_width=True)
-                st.markdown(f"🧵 テーマ: `{post['theme']}`　🎨 色: `{post['color']}`　🧍‍♀️ スタイル: `{post['style']}`")
+                st.markdown(f"🧵 テーマ: `{post['theme']}` 🎨 色: `{post['color']}` 👕 スタイル: `{post['style']}`")
                 st.markdown(f"❤️ {post['likes']} likes")
                 if st.button(f"👍 いいねする", key=post["id"]):
                     like_post(post["id"])
                     st.experimental_rerun()
 
-with tab3:
-    st.header("🔥 人気ランキング")
-
-    sorted_posts = sorted(load_posts(), key=lambda x: x["likes"], reverse=True)
-    if not sorted_posts:
-        st.info("まだランキングがありません。")
-    else:
-        for i, post in enumerate(sorted_posts[:10]):
-            with st.container():
-                st.subheader(f"#{i+1}　❤️ {post['likes']} Likes")
-                st.image(post["image_url"], caption=f"{post['country']} / {post['gender']} / {post['age']}歳", use_container_width=True)
-                st.markdown(f"🧵 テーマ: `{post['theme']}`　🎨 色: `{post['color']}`　🧍‍♀️ スタイル: `{post['style']}`")
+ 
