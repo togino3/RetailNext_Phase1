@@ -1,3 +1,8 @@
-openai>=1.10.0
 streamlit
 pillow
+pandas
+openai
+transformers
+torch
+scikit-learn
+requests
