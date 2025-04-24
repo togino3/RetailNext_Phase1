@@ -19,11 +19,7 @@ SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/ma
 
 # セッション内に投稿データ保持
 if "posts" not in st.session_state:
-    if os.path.exists(POSTS_FILE):
-        with open(POSTS_FILE, "r") as f:
-            st.session_state["posts"] = json.load(f)
-    else:
-        st.session_state["posts"] = []
+    st.session_state["posts"] = []
 
 def load_posts():
     return st.session_state["posts"]
