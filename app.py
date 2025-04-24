@@ -10,20 +10,12 @@ import uuid
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-# ✅ APIキー読み込み
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# --- ページ設定 ---
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
-
-# --- 投稿データファイル ---
 POSTS_FILE = "posts.json"
-
-# --- GitHub 画像ディレクトリのベースURL ---
 SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
 
-
-# ✅ 初期化
 if not os.path.exists(POSTS_FILE):
     with open(POSTS_FILE, "w") as f:
         json.dump([], f)
@@ -50,8 +42,7 @@ def fetch_github_image_list():
     url = "https://api.github.com/repos/openai/openai-cookbook/contents/examples/data/sample_clothes/sample_images"
     response = requests.get(url)
     data = response.json()
-    image_files = [item['name'] for item in data if item['name'].endswith('.jpg')]
-    return image_files
+    return [SAMPLE_IMAGES_URL + item['name'] for item in data if item['name'].endswith('.jpg')]
 
 def extract_color_vector(image_url):
     try:
@@ -61,17 +52,16 @@ def extract_color_vector(image_url):
     except:
         return np.array([0, 0, 0])
 
-def find_similar_images(generated_url, top_k=3):
+def find_similar_images(generated_url, image_urls, top_k=3):
     base_vec = extract_color_vector(generated_url)
     similarities = []
-    for img_url in SAMPLE_IMAGES:
+    for img_url in image_urls:
         vec = extract_color_vector(img_url)
         sim = cosine_similarity([base_vec], [vec])[0][0]
         similarities.append((sim, img_url))
     return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
-
-# --- タブ構成 ---
+# --- UI構成 ---
 tab1, tab2, tab3 = st.tabs(["🧠 コーデ診断", "🌐 みんなのコーデ", "🔥 人気ランキング"])
 
 with tab1:
@@ -111,24 +101,21 @@ with tab1:
 - 背景は白
 - ファッションと人物が中心になるように
 - 顔はアニメスタイルで自然に、目立ちすぎない
-
-あなたは世界中の文化に対応したファッションアドバイザーとして、この人物に最も似合うコーディネートを提案してください。
 """
 
         response = client.images.generate(
             model="dall-e-3",
             prompt=user_prompt,
-            size="518x518",
+            size="1024x1024",
             quality="standard",
             n=1
         )
         image_url = response.data[0].url
         st.image(image_url, caption="👕 AIコーデ提案", use_container_width=True)
 
-        # 類似商品表示
         st.subheader("🛍 類似商品")
-        image_list = fetch_github_image_list()
-        similar_images = find_similar_images(image_url, image_list)
+        github_images = fetch_github_image_list()
+        similar_images = find_similar_images(image_url, github_images)
         for url in similar_images:
             st.image(url, width=200)
             st.markdown(f"[🛒 カートに追加（ダミー）](#)", unsafe_allow_html=True)
