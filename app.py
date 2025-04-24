@@ -1,5 +1,5 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 import requests
 from PIL import Image
 import os
@@ -10,7 +10,7 @@ import numpy as np
 
 # --- 設定 ---
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # --- 定数 ---
 POSTS_FILE = "posts.json"
@@ -85,7 +85,7 @@ with tab1:
 
         # DALL·E 3による画像生成
         with open("temp.png", "rb") as image_file:
-            response = openai.Image.create(
+            response = client.Image.create(
                 model="dall-e-3",
                 prompt=user_prompt,
                 size="1024x1024",
