@@ -139,18 +139,24 @@ with tab1:
 # 🌐 みんなのコーデ + ランキング
 # ------------------------
 with tab2:
-    st.markdown("---")
     st.header("🔥 上位ランキング")
+
+    posts = load_posts()  # ← これを top_posts より前に！
+
     top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
-    for i, post in enumerate(top_posts):
-        with st.container():
-            st.subheader(f"#{i+1}　❤️ {post['likes']} Likes")
-            st.image(post["image_url"], use_container_width=True)
-            st.markdown(f"🧵 テーマ: `{post['theme']}` 🎨 色: `{post['color']}` 👕 スタイル: `{post['style']}`")
-      
+
+    if not top_posts:
+        st.info("まだランキングがありません。")
+    else:
+        for i, post in enumerate(top_posts):
+            with st.container():
+                st.subheader(f"#{i+1}　❤️ {post['likes']} Likes")
+                st.image(post["image_url"], use_container_width=True)
+                st.markdown(f"🧵 テーマ: `{post['theme']}` 🎨 色: `{post['color']}` 👕 スタイル: `{post['style']}`")
+
+    st.markdown("---")
     st.header("🌐 みんなのコーデ")
 
-    posts = load_posts()
     if not posts:
         st.info("まだ投稿がありません。")
     else:
