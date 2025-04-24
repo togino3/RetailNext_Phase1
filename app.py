@@ -14,32 +14,26 @@ from sklearn.metrics.pairwise import cosine_similarity
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 
-POSTS_FILE = "posts.json"
+
 FEATURES_FILE = "features.json"
 SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
 
 # --- Post Management ---
-if not os.path.exists(POSTS_FILE):
-    with open(POSTS_FILE, "w") as f:
-        json.dump([], f)
+
+
+if "posts" not in st.session_state:
+    st.session_state["posts"] = []
 
 def load_posts():
-    with open(POSTS_FILE, "r") as f:
-        return json.load(f)
+    return st.session_state["posts"]
 
 def save_post(post):
-    posts = load_posts()
-    posts.append(post)
-    with open(POSTS_FILE, "w") as f:
-        json.dump(posts, f, indent=2)
+    st.session_state["posts"].append(post)
 
 def like_post(post_id):
-    posts = load_posts()
-    for post in posts:
+    for post in st.session_state["posts"]:
         if post["id"] == post_id:
             post["likes"] += 1
-    with open(POSTS_FILE, "w") as f:
-        json.dump(posts, f, indent=2)
 
 @st.cache_data
 def load_feature_vectors():
@@ -75,7 +69,7 @@ def find_similar_images(image_url, target_gender, target_category, top_k=3):
 
 
 # --- Tab ---
-tab1, tab2 = st.tabs(["🧠 AI Outfit Suggestion", "🌐 Community Gallery"])
+tab1, tab2 = st.tabs(["🧠 AI Coordinator", "🌐 Community Gallery"])
 
 # Coordinator
 with tab1:
@@ -150,9 +144,9 @@ Generate a full-body anime-style fashion coordination image for one person, base
         st.success("👚 Your coordination has been posted to the community!")
 
 
-# 🌐 Community Coordination Gallery
+# 🌐 Community Gallery
 with tab2:
-    st.header("🌐 Community Coordination Gallery")
+    st.header("🌐 Community Gallery")
 
     posts = load_posts()
     top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
