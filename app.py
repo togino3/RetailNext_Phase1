@@ -41,10 +41,13 @@ def like_post(post_id):
 @st.cache_data
 def load_feature_vectors():
     with open(FEATURES_FILE, "r") as f:
-        data = json.load(f)
-    for item in data:
+        raw_data = json.load(f)
+
+    # 各要素の "vector" を NumPy 配列に変換して返す
+    for item in raw_data:
         item["vector"] = np.array(item["vector"])
-    return data
+
+    return raw_data
 
 def extract_color_vector(image_url):
     try:
@@ -55,15 +58,20 @@ def extract_color_vector(image_url):
         return np.array([0, 0, 0])
 
 
-def find_similar_images_with_gender(generated_url, user_gender, top_k=3):
-    base_vec = extract_color_vector(generated_url)
-    features = load_feature_vectors()
+SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
 
+def find_similar_images_with_gender(image_url, target_gender, top_k=3):
+    base_vec = extract_color_vector(image_url)
+    features = load_feature_vectors()
     similarities = []
+
     for item in features:
-        if item["gender"] == user_gender:
-            sim = cosine_similarity([base_vec], [item["vector"]])[0][0]
-            similarities.append((sim, item["url"]))
+        if item["gender"] != target_gender:
+            continue
+        vec = item["vector"]
+        sim = cosine_similarity([base_vec], [vec])[0][0]
+        image_url = SAMPLE_IMAGES_URL + item["filename"]
+        similarities.append((sim, image_url))
 
     return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
