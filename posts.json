@@ -1,0 +1,124 @@
+[
+    {
+      "id": "1",
+      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10022.jpg",
+      "country": "Japan",
+      "gender": "女性",
+      "age": 23,
+      "body_shape": "スリム",
+      "color": "ピンク",
+      "theme": "春のカフェ",
+      "style": "日本",
+      "likes": 4
+    },
+    {
+      "id": "2",
+      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10078.jpg",
+      "country": "USA",
+      "gender": "男性",
+      "age": 30,
+      "body_shape": "がっしり",
+      "color": "ネイビー",
+      "theme": "カジュアルデート",
+      "style": "ディズニー",
+      "likes": 2
+    },
+    {
+      "id": "3",
+      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10081.jpg",
+      "country": "France",
+      "gender": "女性",
+      "age": 27,
+      "body_shape": "標準",
+      "color": "ホワイト",
+      "theme": "休日のお散歩",
+      "style": "CG",
+      "likes": 3
+    },
+    {
+      "id": "4",
+      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10155.jpg",
+      "country": "Brazil",
+      "gender": "男性",
+      "age": 35,
+      "body_shape": "標準",
+      "color": "ブラック",
+      "theme": "夜のお出かけ",
+      "style": "アメリカンコミック",
+      "likes": 5
+    },
+    {
+      "id": "5",
+      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10281.jpg",
+      "country": "India",
+      "gender": "女性",
+      "age": 29,
+      "body_shape": "スリム",
+      "color": "レッド",
+      "theme": "パーティースタイル",
+      "style": "CG",
+      "likes": 8
+    },
+    {
+      "id": "6",
+      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10283.jpg",
+      "country": "USA",
+      "gender": "男性",
+      "age": 32,
+      "body_shape": "がっしり",
+      "color": "ブルー",
+      "theme": "アウトドア",
+      "style": "アメリカンコミック",
+      "likes": 1
+    },
+    {
+      "id": "7",
+      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10403.jpg",
+      "country": "Japan",
+      "gender": "女性",
+      "age": 24,
+      "body_shape": "標準",
+      "color": "イエロー",
+      "theme": "お花見コーデ",
+      "style": "日本",
+      "likes": 6
+    },
+    {
+      "id": "8",
+      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10406.jpg",
+      "country": "France",
+      "gender": "男性",
+      "age": 28,
+      "body_shape": "スリム",
+      "color": "グリーン",
+      "theme": "春のパリ旅行",
+      "style": "ディズニー",
+      "likes": 9
+    },
+    {
+      "id": "9",
+      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10428.jpg",
+      "country": "Brazil",
+      "gender": "女性",
+      "age": 31,
+      "body_shape": "ぽっちゃり",
+      "color": "ブルーグレー",
+      "theme": "ビーチサイド",
+      "style": "CG",
+      "likes": 0
+    },
+    {
+      "id": "10",
+      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10453.jpg",
+      "country": "India",
+      "gender": "男性",
+      "age": 26,
+      "body_shape": "標準",
+      "color": "ターコイズ",
+      "theme": "フェスコーデ",
+      "style": "日本",
+      "likes": 7
+    }
+
+  ]
+  

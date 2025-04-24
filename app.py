@@ -145,35 +145,49 @@ with tab1:
         st.success("👚 コーデ画像をコミュニティに投稿しました！")
 
 
+
 # ------------------------
-# 🌐 みんなのコーデ + ランキング
+# 🌐 みんなのコーディネート
 # ------------------------
 with tab2:
-    st.header("🔥 上位ランキング")
+    st.header("🌐 みんなのコーディネート")
 
     posts = load_posts()
     top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
 
-    if not top_posts:
-        st.info("まだランキングがありません。")
-    else:
+    if top_posts:
+        st.subheader("🔥 人気ランキング TOP 5")
         for i, post in enumerate(top_posts):
             with st.container():
-                st.subheader(f"#{i+1}　❤️ {post['likes']} Likes")
-                st.image(post["image_url"], use_container_width=True)
-                st.markdown(f"🧵 テーマ: `{post['theme']}` 🎨 色: `{post['color']}` 👕 スタイル: `{post['style']}`")
+                st.markdown(f"### #{i+1}　❤️ {post['likes']} Likes")
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    st.image(post["image_url"], width=150)
+                with col2:
+                    st.markdown(f"**🧵 テーマ:** {post['theme']}")
+                    st.markdown(f"**🌍 国:** {post['country']}")
+                    st.markdown(f"**👤 性別:** {post['gender']} / **🎂 年齢:** {post['age']}歳")
+                    st.markdown(f"**💪 体型:** {post.get('body_shape', 'N/A')} / **🎨 色:** {post['color']}")
+                    st.markdown(f"**🎞️ スタイル:** {post['style']}")
+        st.markdown("---")
 
-    st.markdown("---")
-    st.header("🌐 みんなのコーデ")
+    st.subheader("🧑‍🤝‍🧑 みんなの投稿一覧")
 
     if not posts:
         st.info("まだ投稿がありません。")
     else:
-        for post in reversed(posts):
+        for post in reversed(posts[:20]):  # 最新の20件を表示
             with st.container():
-                st.image(post["image_url"], caption=f"{post['country']} / {post['gender']} / {post['age']}歳", use_container_width=True)
-                st.markdown(f"🧵 テーマ: `{post['theme']}` 🎨 色: `{post['color']}` 👕 スタイル: `{post['style']}`")
-                st.markdown(f"❤️ {post['likes']} likes")
-                if st.button(f"👍 いいねする", key=post["id"]):
-                    like_post(post["id"])
-                    st.experimental_rerun()
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    st.image(post["image_url"], width=150)
+                with col2:
+                    st.markdown(f"**🧵 テーマ:** {post['theme']}")
+                    st.markdown(f"**🌍 国:** {post['country']}")
+                    st.markdown(f"**👤 性別:** {post['gender']} / **🎂 年齢:** {post['age']}歳")
+                    st.markdown(f"**💪 体型:** {post.get('body_shape', 'N/A')} / **🎨 色:** {post['color']}")
+                    st.markdown(f"**🎞️ スタイル:** {post['style']}")
+                    st.markdown(f"❤️ {post['likes']} likes")
+                    if st.button("👍 いいねする", key=post["id"]):
+                        like_post(post["id"])
+                        st.experimental_rerun()
