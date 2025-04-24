@@ -140,10 +140,10 @@ Generate a full-body anime-style fashion coordination image for one person, base
         st.subheader("🛍 Similar Items")
         similar_images = find_similar_images_from_PIL(dalle_image, gender)
         cols = st.columns(5)
-for i, url in enumerate(similar_images):
-    with cols[i % 5]:
-        st.image(url, use_column_width=True)
-        st.markdown(f"[🛒 Add to Cart](#)", unsafe_allow_html=True)
+        for i, url in enumerate(similar_images):
+            with cols[i % 5]:
+                st.image(url, use_column_width=True)
+                st.markdown(f"[🛒 Add to Cart](#)", unsafe_allow_html=True)
 
         save_post({
             "id": str(uuid.uuid4()),
