@@ -131,7 +131,7 @@ Generate a full-body anime-style fashion coordination image for one person, base
         category = "Top" if "shirt" in fashion_theme.lower() or "top" in fashion_theme.lower() else "Bottom"
         similar_images = find_similar_images(image_url, gender, category)
         for url in similar_images:
-            st.image(url, width=200)
+            st.image(url, width=400)
             st.markdown(f"[🛒 Add to Cart (Dummy)](#)", unsafe_allow_html=True)
 
         save_post({
