@@ -13,10 +13,15 @@ from sklearn.metrics.pairwise import cosine_similarity
 # ✅ APIキー読み込み
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# ✅ 設定
+# --- ページ設定 ---
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
+
+# --- 投稿データファイル ---
 POSTS_FILE = "posts.json"
-SAMPLE_IMAGES = [f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{i}.jpg" for i in range(10022, 10050)]
+
+# --- GitHub 画像ディレクトリのベースURL ---
+SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
+
 
 # ✅ 初期化
 if not os.path.exists(POSTS_FILE):
@@ -40,6 +45,13 @@ def like_post(post_id):
             post["likes"] += 1
     with open(POSTS_FILE, "w") as f:
         json.dump(posts, f, indent=2)
+
+def fetch_github_image_list():
+    url = "https://api.github.com/repos/openai/openai-cookbook/contents/examples/data/sample_clothes/sample_images"
+    response = requests.get(url)
+    data = response.json()
+    image_files = [item['name'] for item in data if item['name'].endswith('.jpg')]
+    return image_files
 
 def extract_color_vector(image_url):
     try:
@@ -67,12 +79,12 @@ with tab1:
 
     with st.form("fashion_form"):
         uploaded_image = st.file_uploader("👕 顔写真をアップロード", type=["jpg", "jpeg", "png"])
-        country = st.selectbox("🌍 国", ["Japan", "USA", "France", "Brazil", "India"])
+        country = st.text_input("🌍 国（例：Japan, USA など）")
         gender = st.selectbox("性別", ["男性", "女性", "その他"])
         age = st.slider("年齢", 1, 100, 25)
         body_shape = st.selectbox("体型", ["スリム", "標準", "ぽっちゃり"])
-        favorite_color = st.color_picker("🎨 好きな色")
-        anime_style = st.selectbox("アニメスタイル", ["日本レトロ", "ディズニー", "アメリカンコミック", "CG"])
+        favorite_color = st.text_input("🎨 好きな色（例：black, pink など）")
+        anime_style = st.selectbox("アニメスタイル", ["ディズニー", "アメリカンコミック", "日本", "CG"])
         fashion_theme = st.text_input("🧵 ファッションテーマ（例：春っぽく、明るく）")
         submitted = st.form_submit_button("✨ AIコーディネート生成")
 
@@ -83,6 +95,8 @@ with tab1:
         img_bytes = buffered.getvalue()
 
         user_prompt = f"""
+
+あなたは世界中の人たちの国、文化、趣味に合ったファッションを提供できるスーパーアドバイザーです
 以下のお客様の要望に合うファッションコーディネート画像を作成してください：
 
 ・住んでいる国: {country}
@@ -93,14 +107,14 @@ with tab1:
 ・ファッションテーマ: {fashion_theme}
 ・アニメスタイル: {anime_style}
 
-出力形式は、1人の人物がそのファッションに身を包んでいるアニメスタイルの全身イラスト。
-背景は白、余計な要素を含めず、人物と服装に焦点を当ててください。
+出力される画像は、アニメスタイルの全身イラスト一人です。
+背景は白、人物と服装だけの画像にしてください。
 """
 
         response = client.images.generate(
             model="dall-e-3",
             prompt=user_prompt,
-            size="1024x1024",
+            size="518x518",
             quality="standard",
             n=1
         )
@@ -109,7 +123,9 @@ with tab1:
 
         # 類似商品表示
         st.subheader("🛍 類似商品")
-        for url in find_similar_images(image_url):
+        image_list = fetch_github_image_list()
+        similar_images = find_similar_images(image_url, image_list)
+        for url in similar_images:
             st.image(url, width=200)
             st.markdown(f"[🛒 カートに追加（ダミー）](#)", unsafe_allow_html=True)
 
@@ -126,17 +142,30 @@ with tab1:
         })
 
 with tab2:
-    st.subheader("🌐 みんなのコーデ")
-    for post in load_posts()[::-1]:
-        st.image(post["image_url"], caption=f"{post['country']} / {post['gender']} / {post['age']}歳")
-        st.markdown(f"🧵 テーマ: `{post['theme']}`　🎨 色: `{post['color']}`　🧍‍♀️ スタイル: `{post['style']}`")
-        if st.button(f"❤️ いいね {post['likes']}", key=post["id"]):
-            like_post(post["id"])
-            st.experimental_rerun()
+    st.header("🌐 みんなのコーデ")
+
+    posts = load_posts()
+    if not posts:
+        st.info("まだ投稿がありません。")
+    else:
+        for post in reversed(posts):
+            with st.container():
+                st.image(post["image_url"], caption=f"{post['country']} / {post['gender']} / {post['age']}歳", use_container_width=True)
+                st.markdown(f"🧵 テーマ: `{post['theme']}`　🎨 色: `{post['color']}`　🧍‍♀️ スタイル: `{post['style']}`")
+                st.markdown(f"❤️ {post['likes']} likes")
+                if st.button(f"👍 いいねする", key=post["id"]):
+                    like_post(post["id"])
+                    st.experimental_rerun()
 
 with tab3:
-    st.subheader("🔥 人気ランキング")
-    posts = sorted(load_posts(), key=lambda x: x["likes"], reverse=True)
-    for i, post in enumerate(posts[:10]):
-        st.image(post["image_url"], caption=f"#{i+1} ❤️ {post['likes']} Likes", use_container_width=True)
-        st.markdown(f"{post['country']} / {post['gender']} / {post['age']}歳 - 🧵 {post['theme']}")
+    st.header("🔥 人気ランキング")
+
+    sorted_posts = sorted(load_posts(), key=lambda x: x["likes"], reverse=True)
+    if not sorted_posts:
+        st.info("まだランキングがありません。")
+    else:
+        for i, post in enumerate(sorted_posts[:10]):
+            with st.container():
+                st.subheader(f"#{i+1}　❤️ {post['likes']} Likes")
+                st.image(post["image_url"], caption=f"{post['country']} / {post['gender']} / {post['age']}歳", use_container_width=True)
+                st.markdown(f"🧵 テーマ: `{post['theme']}`　🎨 色: `{post['color']}`　🧍‍♀️ スタイル: `{post['style']}`")
