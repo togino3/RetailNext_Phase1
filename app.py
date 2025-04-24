@@ -127,7 +127,7 @@ Generate a full-body anime-style fashion coordination image for one person, base
         image_url = response.data[0].url
         st.image(image_url, caption="👕 AI Coordination Suggestion", width=300)
 
-  # --- ローカルに一時保存してPILで開く ---
+        # --- ローカルに一時保存してPILで開く ---
         dalle_img_response = requests.get(image_url)
         local_path = f"generated/{str(uuid.uuid4())}.png"
         os.makedirs("generated", exist_ok=True)
@@ -139,9 +139,11 @@ Generate a full-body anime-style fashion coordination image for one person, base
         category = "Top" if "shirt" in fashion_theme.lower() or "top" in fashion_theme.lower() else "Bottom"
         st.subheader("🛍 Similar Items")
         similar_images = find_similar_images_from_PIL(dalle_image, gender)
-        for url in similar_images:
-            st.image(url, width=200)
-            st.markdown(f"[🛒 Add to Cart](#)", unsafe_allow_html=True)
+        cols = st.columns(5)
+for i, url in enumerate(similar_images):
+    with cols[i % 5]:
+        st.image(url, use_column_width=True)
+        st.markdown(f"[🛒 Add to Cart](#)", unsafe_allow_html=True)
 
         save_post({
             "id": str(uuid.uuid4()),
