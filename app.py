@@ -86,7 +86,7 @@ with tab1:
         age = st.slider("Age", 1, 100, 25)
         body_shape = st.selectbox("Body Shape", ["Slim", "Regular", "Curvy"])
         favorite_color = st.text_input("🎨 Favorite Color (e.g., black, pink)")
-        draw_style = st.selectbox("Drawing Style", ["Disney", "American Comic", "Japanese", "CG"])
+        draw_style = st.selectbox("Drawing Style", ["Disney", "American Comic", "Japanese Anime", "3D CG"])
         fashion_theme = st.text_input("🧵 Fashion Theme (e.g., spring, bright)")
         submitted = st.form_submit_button("✨ Generate AI Coordination")
 
@@ -129,7 +129,7 @@ Generate a full-body anime-style fashion coordination image for one person, base
         similar_images = find_similar_images(image_url, gender, category)
         for url in similar_images:
             st.image(url, width=200)
-            st.markdown(f"[🛒 Add to Cart (Dummy)](#)", unsafe_allow_html=True)
+            st.markdown(f"[🛒 Add to Cart](#)", unsafe_allow_html=True)
 
         save_post({
             "id": str(uuid.uuid4()),
