@@ -1,14 +1,14 @@
 [
     {
       "id": "1",
-      "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10022.jpg",
+      "image_url": "image/image1.png",
       "country": "Japan",
-      "gender": "女性",
-      "age": 23,
+      "gender": "男性",
+      "age": 25,
       "body_shape": "スリム",
-      "color": "ピンク",
-      "theme": "春のカフェ",
-      "style": "日本",
+      "color": "Bule",
+      "theme": "Cafe",
+      "style": "Japan",
       "likes": 4
     },
     {
