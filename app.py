@@ -10,13 +10,15 @@ import uuid
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
+# --- 初期設定 ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
+
 POSTS_FILE = "posts.json"
 FEATURES_FILE = "features.json"
 SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
 
+# --- 投稿管理 ---
 if not os.path.exists(POSTS_FILE):
     with open(POSTS_FILE, "w") as f:
         json.dump([], f)
@@ -55,6 +57,7 @@ def extract_color_vector(image_url):
     except:
         return np.array([0, 0, 0])
 
+
 def find_similar_images(image_url, target_gender, target_category, top_k=3):
     base_vec = extract_color_vector(image_url)
     features = load_feature_vectors()
@@ -65,8 +68,8 @@ def find_similar_images(image_url, target_gender, target_category, top_k=3):
             continue
         vec = item["vector"]
         sim = cosine_similarity([base_vec], [vec])[0][0]
-        image_url = SAMPLE_IMAGES_URL + item["filename"]
-        similarities.append((sim, image_url))
+        full_url = SAMPLE_IMAGES_URL + item["filename"]
+        similarities.append((sim, full_url))
 
     return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
@@ -80,7 +83,7 @@ with tab1:
     st.title("🌟 RetailNext Coordinator")
 
     with st.form("fashion_form"):
-        uploaded_image = st.file_uploader("👕 顔写真をアップロード", type=["jpg", "jpeg", "png"])
+        uploaded_image = st.file_uploader("😊 顔写真をアップロード", type=["jpg", "jpeg", "png"])
         country = st.text_input("🌍 国（例：Japan, USA など）")
         gender = st.selectbox("性別", ["男性", "女性", "その他"])
         age = st.slider("年齢", 1, 100, 25)
@@ -97,7 +100,7 @@ with tab1:
         img_bytes = buffered.getvalue()
 
         user_prompt = f"""
-以下の条件に基づいて、人物が全身で1人で写っている作画スタイルのファッションコーディネート画像を生成してください：
+以下の条件に基づいて、人物が全身で1人で写っているファッションコーディネート画像を生成してください：
 
 ・国: {country}
 ・性別: {gender}
@@ -111,21 +114,22 @@ with tab1:
 - 背景は白
 - 人物とファッションが中心
 - 顔は作画スタイルで自然、目立ちすぎない
+- 人物は必ず服を着ていること。過度な露出は禁止。
 """
 
         response = client.images.generate(
             model="dall-e-3",
             prompt=user_prompt,
-            size="1024x1024",
+            size="512x512",
             quality="standard",
             n=1
         )
         image_url = response.data[0].url
-        st.image(image_url, caption="👕 AIコーデ提案", use_container_width=True)
+        st.image(image_url, caption="👕 AIコーデ提案", width=300)
 
-        # 類似商品（色＋性別＋カテゴリベース）
+        # 類似商品表示
         st.subheader("🛍 類似商品")
-        category = "トップス" if "シャツ" in fashion_theme or "トップス" in fashion_theme else "ボトムス"  # 仮判定ロジック
+        category = "トップス" if "シャツ" in fashion_theme or "トップス" in fashion_theme else "ボトムス"
         similar_images = find_similar_images(image_url, gender, category)
         for url in similar_images:
             st.image(url, width=200)
@@ -137,13 +141,14 @@ with tab1:
             "country": country,
             "gender": gender,
             "age": age,
-            "style": draw_style,
+            "body_shape": body_shape,
             "color": favorite_color,
             "theme": fashion_theme,
+            "style": draw_style,
             "likes": 0
         })
-        st.success("👚 コーデ画像をコミュニティに投稿しました！")
 
+        st.success("👚 コーデ画像をコミュニティに投稿しました！")
 
 
 # ------------------------
@@ -169,6 +174,7 @@ with tab2:
                     st.markdown(f"**👤 性別:** {post['gender']} / **🎂 年齢:** {post['age']}歳")
                     st.markdown(f"**💪 体型:** {post.get('body_shape', 'N/A')} / **🎨 色:** {post['color']}")
                     st.markdown(f"**🎞️ スタイル:** {post['style']}")
+
         st.markdown("---")
 
     st.subheader("🧑‍🤝‍🧑 みんなの投稿一覧")
@@ -191,3 +197,4 @@ with tab2:
                     if st.button("👍 いいねする", key=post["id"]):
                         like_post(post["id"])
                         st.experimental_rerun()
+
