@@ -55,7 +55,7 @@ def extract_color_vector_from_PIL(pil_image):
     arr = np.array(image).reshape(-1, 3)
     return np.mean(arr, axis=0)
 
-def find_similar_images_from_PIL(pil_image, target_gender, top_k=3):
+def find_similar_images_from_PIL(pil_image, target_gender, top_k=5):
     base_rgb = np.array(pil_image.resize((64, 64)).convert("RGB"))
     center_rgb = base_rgb[16:48, 16:48].reshape(-1, 3)
     mean_rgb = np.mean(center_rgb, axis=0)
