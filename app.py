@@ -10,18 +10,12 @@ import uuid
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-# --- APIキー ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# --- ページ設定 ---
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
-
-# --- 定数 ---
 POSTS_FILE = "posts.json"
-COLOR_FEATURES_FILE = "color_features.json"
-SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
+FEATURES_FILE = "features.json"
 
-# --- JSONファイル初期化 ---
 if not os.path.exists(POSTS_FILE):
     with open(POSTS_FILE, "w") as f:
         json.dump([], f)
@@ -45,33 +39,40 @@ def like_post(post_id):
         json.dump(posts, f, indent=2)
 
 @st.cache_data
-def load_color_features():
-    with open(COLOR_FEATURES_FILE, "r") as f:
-        return json.load(f)
+def load_feature_vectors():
+    with open(FEATURES_FILE, "r") as f:
+        data = json.load(f)
+    for item in data:
+        item["vector"] = np.array(item["vector"])
+    return data
 
 def extract_color_vector(image_url):
     try:
         image = Image.open(BytesIO(requests.get(image_url).content)).resize((32, 32))
         arr = np.array(image).reshape(-1, 3)
-        return np.mean(arr, axis=0).tolist()
+        return np.mean(arr, axis=0)
     except:
-        return [0, 0, 0]
+        return np.array([0, 0, 0])
 
-def find_similar_images_fast(generated_url, color_features, top_k=10):
+
+def find_similar_images_with_gender(generated_url, user_gender, top_k=3):
     base_vec = extract_color_vector(generated_url)
+    features = load_feature_vectors()
+
     similarities = []
-    for filename, vec in color_features.items():
-        sim = cosine_similarity([base_vec], [vec])[0][0]
-        img_url = SAMPLE_IMAGES_URL + filename
-        similarities.append((sim, img_url))
+    for item in features:
+        if item["gender"] == user_gender:
+            sim = cosine_similarity([base_vec], [item["vector"]])[0][0]
+            similarities.append((sim, item["url"]))
+
     return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
-# --- UI ---
+
+# --- タブ構成 ---
 tab1, tab2 = st.tabs(["🧠 コーデ診断", "🌐 みんなのコーデ + ランキング"])
 
-
 # ------------------------
-# 🧠 コーデ診断タブ
+# 🧠 コーデ診断
 # ------------------------
 with tab1:
     st.title("🌟 RetailNext Coordinator")
@@ -83,7 +84,7 @@ with tab1:
         age = st.slider("年齢", 1, 100, 25)
         body_shape = st.selectbox("体型", ["スリム", "標準", "ぽっちゃり"])
         favorite_color = st.text_input("🎨 好きな色（例：black, pink など）")
-        drawing_style = st.selectbox("作画スタイル", ["手描き風（日本）", "ディズニー風", "アメコミ風", "CGスタイル"])
+        draw_style = st.selectbox("作画スタイル", ["ディズニー", "アメリカンコミック", "日本", "CG"])
         fashion_theme = st.text_input("🧵 ファッションテーマ（例：春っぽく、明るく）")
         submitted = st.form_submit_button("✨ AIコーディネート生成")
 
@@ -93,8 +94,9 @@ with tab1:
         image.save(buffered, format="PNG")
         img_bytes = buffered.getvalue()
 
+
         user_prompt = f"""
-以下の条件に基づいて、1人の人物が全身で写っているアニメスタイルのファッションコーディネート画像を生成してください：
+以下の条件に基づいて、人物が全身で1人で写っている作画スタイルのファッションコーディネート画像を生成してください：
 
 ・国: {country}
 ・性別: {gender}
@@ -102,12 +104,12 @@ with tab1:
 ・体型: {body_shape}
 ・好きな色: {favorite_color}
 ・ファッションテーマ: {fashion_theme}
-・作画スタイル: {drawing_style}
+・作画スタイル: {draw_style}
 
-出力画像の条件：
+【出力画像の条件】
 - 背景は白
 - 人物とファッションが中心
-- 顔は自然で目立ちすぎず、{drawing_style}の作画スタイルで描かれている
+- 顔は作画スタイルで自然、目立ちすぎない
 """
 
         response = client.images.generate(
@@ -120,11 +122,11 @@ with tab1:
         image_url = response.data[0].url
         st.image(image_url, caption="👕 AIコーデ提案", use_container_width=True)
 
+        # 類似商品（色＋性別ベース）
         st.subheader("🛍 類似商品")
-        color_features = load_color_features()
-        similar_images = find_similar_images_fast(image_url, color_features)
+        similar_images = find_similar_images_with_gender(image_url, gender)
         for url in similar_images:
-            st.image(url, width=100)
+            st.image(url, width=200)
             st.markdown(f"[🛒 カートに追加（ダミー）](#)", unsafe_allow_html=True)
 
         save_post({
@@ -133,15 +135,12 @@ with tab1:
             "country": country,
             "gender": gender,
             "age": age,
-            "style": anime_style,
+            "style": draw_style,
             "color": favorite_color,
             "theme": fashion_theme,
             "likes": 0
         })
-
         st.success("👚 コーデ画像をコミュニティに投稿しました！")
-
-
 
 # ------------------------
 # 🌐 みんなのコーデ + ランキング
@@ -175,3 +174,4 @@ with tab2:
                 if st.button(f"👍 いいねする", key=post["id"]):
                     like_post(post["id"])
                     st.experimental_rerun()
+
