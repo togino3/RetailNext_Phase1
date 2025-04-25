@@ -60,20 +60,29 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 5):
     with open(EMBEDDED_JSON_FILE, "r") as f:
         items = json.load(f)
 
+    # 属性ベースフィルタリング（gender + baseColour）
+    filtered_items = [item for item in items if
+        item["gender"].lower() == user_profile["gender"].lower() and
+        user_profile["color"].lower() in item["baseColour"].lower()
+    ]
+
+    if not filtered_items:
+        filtered_items = items  # fallback if no match
+
     query_text = (
         f"{user_profile['theme']} fashion for {user_profile['gender']}, "
         f"color: {user_profile['color']}, suitable for ceremony or special event."
     )
     embedding = get_embedding_3small(query_text, st.secrets["OPENAI_API_KEY"])
 
-    all_vectors = np.array([item["embedding"] for item in items], dtype=np.float32)
+    all_vectors = np.array([item["embedding"] for item in filtered_items], dtype=np.float32)
     scores = np.dot(all_vectors, embedding) / (
         np.linalg.norm(all_vectors, axis=1) * np.linalg.norm(embedding) + 1e-5
     )
     for i, score in enumerate(scores):
-        items[i]["score"] = score
+        filtered_items[i]["score"] = score
 
-    top_items = sorted(items, key=lambda x: x["score"], reverse=True)[:top_k]
+    top_items = sorted(filtered_items, key=lambda x: x["score"], reverse=True)[:top_k]
     return top_items
 
 # --- UI Layout ---
