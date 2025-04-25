@@ -43,16 +43,19 @@ def like_post(post_id):
 
 # --- 類似検索 + GPT推薦 ---
 def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
+    import ast
+
     df = pd.read_csv(EMBEDDINGS_FILE)
     df["embedding"] = df["embeddings"].apply(lambda x: np.array(ast.literal_eval(x), dtype=np.float32))
 
+    # --- Step 1: filter by gender and color ---
     df_filtered = df[
         (df["gender"].str.lower() == user_profile["gender"].lower()) &
         (df["baseColour"].str.lower().str.contains(user_profile["color"].lower(), na=False))
     ]
 
     if df_filtered.empty:
-        df_filtered = df  # fallback if no matches
+        df_filtered = df  # fallback to all if no match
 
     all_vectors = np.stack(df_filtered["embedding"].values)
 
@@ -61,14 +64,16 @@ def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
         f"color: {user_profile['color']}, suitable for ceremony or special event."
     )
 
-    # --- Embedding Generation with Model Verification ---
+    # ✅ Embedding model fixed to ada-002 (3072 dim)
     embedding_response = client.embeddings.create(
         model="text-embedding-ada-002",
         input=query_text
     )
-    model_used = embedding_response.model
     embedding = np.array(embedding_response.data[0].embedding, dtype=np.float32)
-    print("\n>>> [DEBUG] Embedding model used:", model_used)
+    model_used = embedding_response.model
+
+    # ✅ Debug log to confirm
+    print(">>> [DEBUG] Embedding model used:", model_used)
     print(">>> [DEBUG] Query embedding dimension:", embedding.shape)
     print(">>> [DEBUG] Product vector shape:", all_vectors.shape)
 
@@ -84,6 +89,7 @@ def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
     items_description = "\n".join(
         [f"{row['productDisplayName']} - {row['gender']}, {row['baseColour']}, {row['articleType']}" for _, row in top_items.iterrows()]
     )
+
     user_msg = f"""
 User Profile:
 - Gender: {user_profile['gender']}
@@ -95,6 +101,7 @@ Top Matching Items:
     """
 
     system_msg = "You are a fashion AI assistant. Please recommend items based on user's profile and the matching product list. Prioritize items that match gender and color exactly."
+
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -104,6 +111,7 @@ Top Matching Items:
     )
 
     return response.choices[0].message.content, top_items.to_dict(orient="records")
+
 
 # --- UI Layout ---
 tab1, tab2 = st.tabs(["🧐 AI Coordinator", "🌐 Community Gallery"])
