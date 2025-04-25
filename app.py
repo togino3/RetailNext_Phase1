@@ -40,7 +40,7 @@ def like_post(post_id):
     with open(POSTS_FILE, "w") as f:
         json.dump(st.session_state["posts"], f, indent=2)
 
-# --- GPT推薦用関数 ---
+# --- GPT Recommendation Logic ---
 def embed_product_text(product):
     text = f"{product['name']}. {product['description']}. Color: {product['color']}. Style: {product['style']}."
     response = client.embeddings.create(model="text-embedding-3-small", input=text)
@@ -69,7 +69,10 @@ Matching Items:
 
     response = client.chat.completions.create(
         model="gpt-4o",
-        messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": user_msg}]
+        messages=[
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_msg}
+        ]
     )
     return response.choices[0].message.content
 
@@ -108,7 +111,6 @@ with tab1:
 
         user_prompt = f"""
 Generate a full-body anime-style fashion coordination image for one person, based on the following conditions:
-
 - Country: {country}
 - Gender: {gender}
 - Age: {age}
@@ -152,7 +154,6 @@ Generate a full-body anime-style fashion coordination image for one person, base
             "likes": 0
         })
 
-        # --- GPTベース推薦追加 ---
         st.subheader("🧠 GPT’s Recommendation")
         user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
         try:
@@ -170,7 +171,7 @@ with tab2:
         st.subheader("🔥 Top 5 Popular Coordinations")
         for i, post in enumerate(top_posts):
             with st.container():
-                st.markdown(f"### #{i+1}　❤️ {post['likes']} Likes")
+                st.markdown(f"### #{i+1} ❤️ {post['likes']} Likes")
                 col1, col2 = st.columns([1, 2])
                 with col1:
                     image_path = post["image_url"]
@@ -181,11 +182,11 @@ with tab2:
                     st.markdown(f"**🧵 Theme:** {post['theme']}")
                     st.markdown(f"**🌍 Country:** {post['country']}")
                     st.markdown(f"**👤 Gender:** {post['gender']} / 🎂 Age: {post['age']}")
-                    st.markdown(f"**💪 Body Shape:** {post.get('body_shape', 'N/A')} / 🎨 Color: {post['color']}")
+                    st.markdown(f"**🏋️ Body Shape:** {post.get('body_shape', 'N/A')} / 🎨 Color: {post['color']}")
                     st.markdown(f"**🎮 Style:** {post['style']}")
         st.markdown("---")
 
-    st.subheader("🧑‍🧱 All Community Posts")
+    st.subheader("🧑‍📽️ All Community Posts")
     if not posts:
         st.info("No posts yet.")
     else:
@@ -201,7 +202,7 @@ with tab2:
                     st.markdown(f"**🧵 Theme:** {post['theme']}")
                     st.markdown(f"**🌍 Country:** {post['country']}")
                     st.markdown(f"**👤 Gender:** {post['gender']} / 🎂 Age: {post['age']}")
-                    st.markdown(f"**💪 Body Shape:** {post.get('body_shape', 'N/A')} / 🎨 Color: {post['color']}")
+                    st.markdown(f"**🏋️ Body Shape:** {post.get('body_shape', 'N/A')} / 🎨 Color: {post['color']}")
                     st.markdown(f"**🎮 Style:** {post['style']}")
                     st.markdown(f"❤️ {post['likes']} likes")
                     if st.button("👍 Like", key=post["id"]):
