@@ -60,12 +60,6 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 5):
     with open(EMBEDDED_JSON_FILE, "r") as f:
         items = json.load(f)
 
-    # 正規化マッピング
-    gender_map = {
-        "Male": ["male", "men"],
-        "Female": ["female", "women"],
-        "Other": []
-    }
     color_map = {
         "navy": ["blue", "black"],
         "orange": ["red", "yellow"],
@@ -80,7 +74,7 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 5):
     # 事前フィルタ
     filtered_items = [
         item for item in items
-        if item["gender"].lower() in gender_map[user_profile["gender"]]
+        if item["gender"].lower() == user_profile["gender"].lower()
         and any(c in item["baseColour"].lower() for c in expanded_colors)
     ]
 
@@ -112,7 +106,7 @@ with tab1:
     with st.form("fashion_form"):
         uploaded_image = st.file_uploader("😊 Upload your face photo", type=["jpg", "jpeg", "png"])
         country = st.text_input("🌍 Country (e.g., USA, Japan, etc.)")
-        gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+        gender = st.selectbox("Gender", ["Men", "Women", "Other"])
         age = st.slider("Age", 1, 100, 25)
         body_shape = st.selectbox("Body Shape", ["Slim", "Regular", "Curvy"])
         favorite_color = st.text_input("🎨 Favorite Color (e.g., black, pink)")
@@ -156,10 +150,12 @@ with tab1:
         user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
         try:
             similar = recommend_from_embedded_json(user_profile)
-            for item in similar:
-                image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
-                st.image(image_url, width=200)
-                st.markdown(f"**{item['productDisplayName']}** - {item['gender']}, {item['baseColour']}, {item['season']}, {item['usage']}")
+            cols = st.columns(3)
+            for i, item in enumerate(similar):
+                with cols[i % 3]:
+                    image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
+                    st.image(image_url, width=200)
+                    st.markdown(f"**{item['productDisplayName']}**\n{item['gender']}, {item['baseColour']}\n{item['season']} / {item['usage']}")
         except Exception as e:
             st.error("Recommendation failed")
             st.exception(e)
@@ -198,4 +194,4 @@ with tab2:
                 st.markdown(f"❤️ {post['likes']} likes")
                 if st.button("👍 Like", key=post["id"]):
                     like_post(post["id"])
-                    st.rerun()
+                    st.experimental_rerun()
