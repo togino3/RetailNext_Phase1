@@ -15,7 +15,7 @@ st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 POSTS_FILE = "posts.json"
-PRODUCTS_FILE = "products_with_embeddings_cleaned.json"
+PRODUCTS_FILE = "products_with_embeddings.json"
 
 # --- Post Management ---
 if "posts" not in st.session_state:
