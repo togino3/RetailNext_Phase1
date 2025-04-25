@@ -1,8 +1,7 @@
 streamlit
-pillow
-pandas
 openai
-transformers
-torch
-scikit-learn
+Pillow
 requests
+numpy
+scikit-learn
+faiss-cpu

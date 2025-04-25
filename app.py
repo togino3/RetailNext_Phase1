@@ -9,6 +9,7 @@ import os
 import uuid
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+import faiss
 
 # --- Setup ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -16,6 +17,7 @@ st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 
 POSTS_FILE = "posts.json"
 FEATURES_FILE = "features.json"
+PRODUCTS_FILE = "products.json"
 SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
 
 # --- Post Management ---
@@ -46,10 +48,10 @@ def load_feature_vectors():
     with open(FEATURES_FILE, "r") as f:
         data = json.load(f)
     for item in data:
-        item["feature_vector"] = np.array(item["feature_vector"])  # ✅ 修正ポイント
+        item["feature_vector"] = np.array(item["feature_vector"])
     return data
 
-# --- 類似画像推薦用：PILベースのベクトル抽出 ---
+# --- 類似画像推薦 ---
 def extract_color_vector_from_PIL(pil_image):
     image = pil_image.resize((32, 32)).convert("RGB")
     arr = np.array(image).reshape(-1, 3)
@@ -59,10 +61,8 @@ def find_similar_images_from_PIL(pil_image, target_gender, top_k=3):
     base_rgb = np.array(pil_image.resize((64, 64)).convert("RGB"))
     center_rgb = base_rgb[16:48, 16:48].reshape(-1, 3)
     mean_rgb = np.mean(center_rgb, axis=0)
-    
     features = load_feature_vectors()
     similarities = []
-
     for item in features:
         if item["gender"] != target_gender:
             continue
@@ -70,15 +70,54 @@ def find_similar_images_from_PIL(pil_image, target_gender, top_k=3):
         sim = cosine_similarity([mean_rgb], [vec[3:]])[0][0]
         full_url = SAMPLE_IMAGES_URL + item["filename"]
         similarities.append((sim, full_url))
-
     return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
-# --- Tab Layout ---
+# --- GPT推薦用関数 ---
+def embed_product_text(product):
+    text = f"{product['name']}. {product['description']}. Color: {product['color']}. Style: {product['style']}."
+    response = client.embeddings.create(model="text-embedding-3-small", input=text)
+    return response.data[0].embedding
+
+def build_product_index(products):
+    embeddings = [embed_product_text(p) for p in products]
+    index = faiss.IndexFlatL2(len(embeddings[0]))
+    index.add(np.array(embeddings).astype("float32"))
+    return index, embeddings
+
+def generate_recommendation(user_profile, matched_products):
+    system_msg = """
+You are a fashion assistant. Based on the user's description and the matching items, recommend the best one in natural language.
+"""
+    user_msg = f"""
+User Profile:
+- Gender: {user_profile['gender']}
+- Theme: {user_profile['theme']}
+- Favorite Color: {user_profile['color']}
+
+Matching Items:
+"""
+    for i, item in enumerate(matched_products):
+        user_msg += f"{i+1}. {item['name']} - {item['description']}\n"
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": user_msg}]
+    )
+    return response.choices[0].message.content
+
+def recommend_with_gpt(user_profile, products_file=PRODUCTS_FILE, top_k=3):
+    with open(products_file) as f:
+        products = json.load(f)
+    index, _ = build_product_index(products)
+    query_text = f"{user_profile['theme']} fashion for {user_profile['gender']}, favorite color: {user_profile['color']}"
+    query_emb = client.embeddings.create(model="text-embedding-3-small", input=query_text).data[0].embedding
+    D, I = index.search(np.array([query_emb]).astype("float32"), k=top_k)
+    matched = [products[i] for i in I[0]]
+    return generate_recommendation(user_profile, matched)
+
+# --- UI Layout ---
 tab1, tab2 = st.tabs(["🧠 AI Coordinator", "🌐 Community Gallery"])
 
-# -----------------------
-# 🧠 AI Coordinator
-# -----------------------
 with tab1:
     st.title("🌟 RetailNext Coordinator")
 
@@ -116,7 +155,6 @@ Generate a full-body anime-style fashion coordination image for one person, base
 - Face should be natural and not overly emphasized
 - The person must be clearly clothed; avoid nudity or excessive exposure
 """
-
         response = client.images.generate(
             model="dall-e-3",
             prompt=user_prompt,
@@ -127,7 +165,6 @@ Generate a full-body anime-style fashion coordination image for one person, base
         image_url = response.data[0].url
         st.image(image_url, caption="👕 AI Coordination Suggestion", width=300)
 
-        # --- ローカルに一時保存してPILで開く ---
         dalle_img_response = requests.get(image_url)
         local_path = f"generated/{str(uuid.uuid4())}.png"
         os.makedirs("generated", exist_ok=True)
@@ -135,7 +172,6 @@ Generate a full-body anime-style fashion coordination image for one person, base
             f.write(dalle_img_response.content)
         dalle_image = Image.open(local_path)
 
-        # --- 類似アイテム推薦 ---
         category = "Top" if "shirt" in fashion_theme.lower() or "top" in fashion_theme.lower() else "Bottom"
         st.subheader("🛍 Similar Items")
         similar_images = find_similar_images_from_PIL(dalle_image, gender)
@@ -158,13 +194,17 @@ Generate a full-body anime-style fashion coordination image for one person, base
             "likes": 0
         })
 
-        st.success("👚 Your coordination has been posted to the community!")
+        # --- GPTベース推薦追加 ---
+        st.subheader("🧠 GPT’s Recommendation")
+        user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
+        try:
+            recommendation = recommend_with_gpt(user_profile)
+            st.markdown(recommendation)
+        except Exception as e:
+            st.error("GPT recommendation failed")
+            st.exception(e)
 
-# -----------------------
-# 🌐 Community Gallery
-# -----------------------
 with tab2:
-
     posts = load_posts()
     top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
 
