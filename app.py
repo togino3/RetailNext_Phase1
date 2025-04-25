@@ -163,10 +163,10 @@ Generate a full-body anime-style fashion coordination image for one person, base
             rec_text, matched = recommend_with_gpt_streamlit(user_profile)
             st.markdown(rec_text)
 
-            st.markdown("### 🖼️ Top 5 Matching Items")
-            cols = st.columns(5)
+            st.markdown("### 🖼️ Top 3 Matching Items")
+            cols = st.columns(3)
             for i, item in enumerate(matched):
-                with cols[i % 5]:
+                with cols[i % 3]:
                     st.image(item["image_url"], caption=item["name"], use_container_width=True)
                     st.markdown(f"[🛒 View Product]({item['product_url']})", unsafe_allow_html=True)
         except Exception as e:
