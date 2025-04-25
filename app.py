@@ -1,7 +1,8 @@
-
 import streamlit as st
 import json
 import numpy as np
+import pandas as pd
+import ast
 from openai import OpenAI
 from typing import List, Dict
 from PIL import Image
@@ -15,7 +16,7 @@ st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 POSTS_FILE = "posts.json"
-PRODUCTS_FILE = "products_with_embeddings.json"
+EMBEDDINGS_FILE = "sample_styles_with_embeddings_with_image.csv"
 
 # --- Post Management ---
 if "posts" not in st.session_state:
@@ -42,28 +43,38 @@ def like_post(post_id):
 
 # --- 類似検索 + GPT推薦 ---
 def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
-    with open(PRODUCTS_FILE, "r") as f:
-        products = json.load(f)
+    df = pd.read_csv(EMBEDDINGS_FILE)
+    df["embedding"] = df["embeddings"].apply(lambda x: np.array(ast.literal_eval(x), dtype=np.float32))
 
-    query_text = f"{user_profile['theme']} fashion for {user_profile['gender']}, favorite color: {user_profile['color']}"
+    query_text = (
+        f"{user_profile['theme']} fashion for {user_profile['gender']}, "
+        f"color: {user_profile['color']}, suitable for ceremony or special event."
+    )
+
     embedding = client.embeddings.create(model="text-embedding-3-small", input=query_text).data[0].embedding
     embedding = np.array(embedding, dtype=np.float32)
 
-    all_vectors = np.array([p["embedding"] for p in products], dtype=np.float32)
-    scores = np.dot(all_vectors, embedding) / (np.linalg.norm(all_vectors, axis=1) * np.linalg.norm(embedding) + 1e-5)
-    top_indices = np.argsort(scores)[-top_k:][::-1]
-    matched = [products[i] for i in top_indices]
+    all_vectors = np.stack(df["embedding"].values)
+    scores = np.dot(all_vectors, embedding) / (
+        np.linalg.norm(all_vectors, axis=1) * np.linalg.norm(embedding) + 1e-5
+    )
+    df["score"] = scores
+    top_items = df.sort_values("score", ascending=False).head(top_k)
 
-    system_msg = "You are a fashion assistant. Based on the user's description and the matching items, recommend the best ones in natural language."
+    items_description = "\n".join(
+        [f"{row['productDisplayName']} - {row['gender']}, {row['baseColour']}, {row['articleType']}" for _, row in top_items.iterrows()]
+    )
     user_msg = f"""
 User Profile:
 - Gender: {user_profile['gender']}
 - Theme: {user_profile['theme']}
 - Favorite Color: {user_profile['color']}
 
-Matching Items:
-""" + "\n".join([f"{i+1}. {item['name']} - {item['description']}" for i, item in enumerate(matched)])
+Top Matching Items:
+{items_description}
+    """
 
+    system_msg = "You are a fashion AI assistant. Please recommend items based on user's profile and the matching product list."
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -71,10 +82,11 @@ Matching Items:
             {"role": "user", "content": user_msg}
         ]
     )
-    return response.choices[0].message.content, matched
+
+    return response.choices[0].message.content, top_items.to_dict(orient="records")
 
 # --- UI Layout ---
-tab1, tab2 = st.tabs(["🧠 AI Coordinator", "🌐 Community Gallery"])
+tab1, tab2 = st.tabs(["🧐 AI Coordinator", "🌐 Community Gallery"])
 
 with tab1:
     st.title("🌟 RetailNext Coordinator")
@@ -131,8 +143,7 @@ with tab1:
             cols = st.columns(3)
             for i, item in enumerate(matched):
                 with cols[i % 3]:
-                    st.image(item["image_url"], caption=item["name"], use_container_width=True)
-                    st.markdown(f"[🛒 View Product]({item['product_url']})", unsafe_allow_html=True)
+                    st.image(item.get("imageUrl", ""), caption=item["productDisplayName"], use_container_width=True)
         except Exception as e:
             st.error("Recommendation failed")
             st.exception(e)
