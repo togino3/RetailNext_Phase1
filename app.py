@@ -60,14 +60,32 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 5):
     with open(EMBEDDED_JSON_FILE, "r") as f:
         items = json.load(f)
 
-    # 属性ベースフィルタリング（gender + baseColour）
-    filtered_items = [item for item in items if
-        item["gender"].lower() == user_profile["gender"].lower() and
-        user_profile["color"].lower() in item["baseColour"].lower()
+    # 正規化マッピング
+    gender_map = {
+        "Male": ["male", "men"],
+        "Female": ["female", "women"],
+        "Other": []
+    }
+    color_map = {
+        "navy": ["blue", "black"],
+        "orange": ["red", "yellow"],
+        "grey": ["gray"]
+    }
+    normalized_color = user_profile["color"].lower()
+    expanded_colors = [normalized_color]
+    for k, v in color_map.items():
+        if normalized_color == k:
+            expanded_colors += v
+
+    # 事前フィルタ
+    filtered_items = [
+        item for item in items
+        if item["gender"].lower() in gender_map[user_profile["gender"]]
+        and any(c in item["baseColour"].lower() for c in expanded_colors)
     ]
 
     if not filtered_items:
-        filtered_items = items  # fallback if no match
+        filtered_items = items
 
     query_text = (
         f"{user_profile['theme']} fashion for {user_profile['gender']}, "
@@ -180,4 +198,4 @@ with tab2:
                 st.markdown(f"❤️ {post['likes']} likes")
                 if st.button("👍 Like", key=post["id"]):
                     like_post(post["id"])
-                    st.experimental_rerun()
+                    st.rerun()
