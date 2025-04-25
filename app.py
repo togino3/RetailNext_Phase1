@@ -16,7 +16,7 @@ st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 POSTS_FILE = "posts.json"
-EMBEDDINGS_FILE = "sample_styles_with_embeddings.csv"
+EMBEDDED_JSON_FILE = "embedded_products.json"
 
 # --- Post Management ---
 if "posts" not in st.session_state:
@@ -41,10 +41,8 @@ def like_post(post_id):
     with open(POSTS_FILE, "w") as f:
         json.dump(st.session_state["posts"], f, indent=2)
 
-# --- 類似検索 + GPT推薦 ---
-import requests  # ← 追記必要（ファイル冒頭）
-
-def get_embedding_ada002(text: str, api_key: str):
+# --- 類似検索 ---
+def get_embedding_3small(text: str, api_key: str):
     url = "https://api.openai.com/v1/embeddings"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -52,67 +50,31 @@ def get_embedding_ada002(text: str, api_key: str):
     }
     payload = {
         "input": text,
-        "model": "text-embedding-ada-002"
+        "model": "text-embedding-3-small"
     }
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
     return np.array(response.json()["data"][0]["embedding"], dtype=np.float32)
 
-def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
-    df = pd.read_csv(EMBEDDINGS_FILE)
-    df["embedding"] = df["embeddings"].apply(lambda x: np.array(ast.literal_eval(x), dtype=np.float32))
-
-    df_filtered = df[
-        (df["gender"].str.lower() == user_profile["gender"].lower()) &
-        (df["baseColour"].str.lower().str.contains(user_profile["color"].lower(), na=False))
-    ]
-
-    if df_filtered.empty:
-        df_filtered = df
-
-    all_vectors = np.stack(df_filtered["embedding"].values)
+def recommend_from_embedded_json(user_profile: Dict, top_k: int = 5):
+    with open(EMBEDDED_JSON_FILE, "r") as f:
+        items = json.load(f)
 
     query_text = (
         f"{user_profile['theme']} fashion for {user_profile['gender']}, "
         f"color: {user_profile['color']}, suitable for ceremony or special event."
     )
+    embedding = get_embedding_3small(query_text, st.secrets["OPENAI_API_KEY"])
 
-    embedding = get_embedding_ada002(query_text, st.secrets["OPENAI_API_KEY"])
-
-    if embedding.shape[0] != all_vectors.shape[1]:
-        raise ValueError(f"Embedding dimension mismatch: user={embedding.shape[0]}, product={all_vectors.shape[1]}")
-
+    all_vectors = np.array([item["embedding"] for item in items], dtype=np.float32)
     scores = np.dot(all_vectors, embedding) / (
         np.linalg.norm(all_vectors, axis=1) * np.linalg.norm(embedding) + 1e-5
     )
-    df_filtered["score"] = scores
-    top_items = df_filtered.sort_values("score", ascending=False).head(top_k)
+    for i, score in enumerate(scores):
+        items[i]["score"] = score
 
-    items_description = "\n".join(
-        [f"{row['productDisplayName']} - {row['gender']}, {row['baseColour']}, {row['articleType']}" for _, row in top_items.iterrows()]
-    )
-    user_msg = f"""
-User Profile:
-- Gender: {user_profile['gender']}
-- Theme: {user_profile['theme']}
-- Favorite Color: {user_profile['color']}
-
-Top Matching Items:
-{items_description}
-    """
-
-    system_msg = "You are a fashion AI assistant. Please recommend items based on user's profile and the matching product list. Prioritize items that match gender and color exactly."
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_msg},
-            {"role": "user", "content": user_msg}
-        ]
-    )
-
-    return response.choices[0].message.content, top_items.to_dict(orient="records")
-
+    top_items = sorted(items, key=lambda x: x["score"], reverse=True)[:top_k]
+    return top_items
 
 # --- UI Layout ---
 tab1, tab2 = st.tabs(["🧐 AI Coordinator", "🌐 Community Gallery"])
@@ -163,14 +125,12 @@ with tab1:
             "likes": 0
         })
 
-        st.subheader("🧠 GPT's Recommendation")
+        st.subheader("🧠 Similar Items Recommendation")
         user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
         try:
-            rec_text, matched = recommend_from_precomputed(user_profile)
-            st.markdown(rec_text)
-            st.markdown("### 🍭 Recommend Item")
-            for item in matched:
-                st.markdown(f"**{item['productDisplayName']}** - {item['gender']}, {item['baseColour']}, {item['articleType']}")
+            similar = recommend_from_embedded_json(user_profile)
+            for item in similar:
+                st.markdown(f"**{item['productDisplayName']}** - {item['gender']}, {item['baseColour']}, {item['season']}, {item['usage']}")
         except Exception as e:
             st.error("Recommendation failed")
             st.exception(e)
