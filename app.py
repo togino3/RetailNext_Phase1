@@ -1,3 +1,4 @@
+
 import streamlit as st
 import openai
 from openai import OpenAI
@@ -11,14 +12,12 @@ import numpy as np
 import faiss
 from typing import List, Dict
 
-# --- OpenAI Client Setup ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 
 POSTS_FILE = "posts.json"
 PRODUCTS_FILE = "products.json"
 
-# --- Post Management ---
 if "posts" not in st.session_state:
     if os.path.exists(POSTS_FILE):
         with open(POSTS_FILE, "r") as f:
@@ -41,9 +40,8 @@ def like_post(post_id):
     with open(POSTS_FILE, "w") as f:
         json.dump(st.session_state["posts"], f, indent=2)
 
-# --- GPT Recommendation (Embedding + FAISS + GPT-4o) ---
 def embed_product_text(product: Dict) -> List[float]:
-    text = f"{product['name']}. {product['description']}. Color: {product['color']}. Style: {product['style']}."
+    text = f"This is a {product['style']} called {product['name']}. It is mainly {product['color']} and suitable for {product['description']}."
     response = client.embeddings.create(
         model="text-embedding-3-small",
         input=text
@@ -57,20 +55,10 @@ def build_index(products: List[Dict]):
     return index, embeddings
 
 def generate_recommendation(user_profile: Dict, matched_products: List[Dict]) -> str:
-    system_msg = """
-You are a fashion assistant. Based on the user's description and the matching items, recommend the best one in natural language.
-"""
-    user_msg = f"""
-User Profile:
-- Gender: {user_profile['gender']}
-- Theme: {user_profile['theme']}
-- Favorite Color: {user_profile['color']}
-
-Matching Items:
-"""
+    system_msg = "You are a fashion assistant. Based on the user's description and the matching items, recommend the best one in natural language."
+    user_msg = f"""User is a {user_profile['gender']} looking for {user_profile['theme']} style clothing.\nThey prefer the color {user_profile['color']}. Age: {user_profile['age']}, Body shape: {user_profile['body_shape']}, Style: {user_profile['style']}.\nMatching Items:\n"""
     for i, item in enumerate(matched_products):
-        user_msg += f"{i+1}. {item['name']} - {item['description']}"
-
+        user_msg += f"{i+1}. {item['name']} - {item['description']}\n"
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -80,21 +68,17 @@ Matching Items:
     )
     return response.choices[0].message.content
 
-def recommend_with_gpt_streamlit(user_profile: Dict, products_file: str = "products.json", top_k: int = 5):
+def recommend_with_gpt_streamlit(user_profile: Dict, products_file: str = "products.json", top_k: int = 3):
     with open(products_file) as f:
         products = json.load(f)
-
     st.info("🔍 Generating smart recommendation with GPT-4o...")
-
     index, _ = build_index(products)
-    query_text = f"{user_profile['theme']} fashion for {user_profile['gender']}, favorite color: {user_profile['color']}"
+    query_text = f"{user_profile['theme']} fashion for {user_profile['gender']}, prefers {user_profile['color']}, shape {user_profile['body_shape']}, age {user_profile['age']}"
     query_emb = client.embeddings.create(model="text-embedding-3-small", input=query_text).data[0].embedding
-
     D, I = index.search(np.array([query_emb]).astype("float32"), k=top_k)
     matched = [products[i] for i in I[0]]
     return generate_recommendation(user_profile, matched), matched
 
-# --- UI Layout ---
 tab1, tab2 = st.tabs(["🧐 AI Coordinator", "🌐 Community Gallery"])
 
 with tab1:
@@ -116,24 +100,7 @@ with tab1:
         buffered = BytesIO()
         image.save(buffered, format="PNG")
         img_bytes = buffered.getvalue()
-
-        user_prompt = f"""
-Generate a full-body anime-style fashion coordination image for one person, based on the following conditions:
-
-- Country: {country}
-- Gender: {gender}
-- Age: {age}
-- Body Shape: {body_shape}
-- Favorite Color: {favorite_color}
-- Fashion Theme: {fashion_theme}
-- Drawing Style: {draw_style}
-
-[Output Requirements]
-- Background should be white
-- Focus on the outfit and the person
-- Face should be natural and not overly emphasized
-- The person must be clearly clothed; avoid nudity or excessive exposure
-"""
+        user_prompt = f"""Generate a full-body anime-style fashion coordination image for one person with: Country={country}, Gender={gender}, Age={age}, Body Shape={body_shape}, Favorite Color={favorite_color}, Theme={fashion_theme}, Drawing Style={draw_style}. White background, clearly clothed, natural face."""
         response = client.images.generate(
             model="dall-e-3",
             prompt=user_prompt,
@@ -143,7 +110,6 @@ Generate a full-body anime-style fashion coordination image for one person, base
         )
         image_url = response.data[0].url
         st.image(image_url, caption="👕 AI Coordination Suggestion", width=300)
-
         save_post({
             "id": str(uuid.uuid4()),
             "image_url": image_url,
@@ -158,11 +124,17 @@ Generate a full-body anime-style fashion coordination image for one person, base
         })
 
         st.subheader("🧠 GPT's Recommendation")
-        user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
+        user_profile = {
+            "gender": gender,
+            "theme": fashion_theme,
+            "color": favorite_color,
+            "age": age,
+            "body_shape": body_shape,
+            "style": draw_style
+        }
         try:
             rec_text, matched = recommend_with_gpt_streamlit(user_profile)
             st.markdown(rec_text)
-
             st.markdown("### 🖼️ Top 3 Matching Items")
             cols = st.columns(3)
             for i, item in enumerate(matched):
@@ -176,7 +148,6 @@ Generate a full-body anime-style fashion coordination image for one person, base
 with tab2:
     posts = load_posts()
     top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
-
     if top_posts:
         st.subheader("🔥 Top 5 Popular Coordinations")
         for i, post in enumerate(top_posts):
