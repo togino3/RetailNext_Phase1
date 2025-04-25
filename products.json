@@ -1,26 +1,42 @@
 [
   {
     "name": "Mark Taylor Men Striped Blue Shirt",
-    "description": "A Blue Shirt for Formal use in Summer 2012.0.",
+    "description": "A blue striped shirt perfect for summer and semi-formal occasions.",
     "color": "Blue",
     "style": "Shirts",
     "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/27152.jpg",
     "product_url": "https://example.com/product/27152"
   },
   {
-    "name": "Flying Machine Men Yellow Polo Tshirts",
-    "description": "A Yellow Tshirt for Casual use in Fall 2011.0.",
+    "name": "Flying Machine Yellow Polo",
+    "description": "A casual yellow polo shirt great for weekends and holidays.",
     "color": "Yellow",
     "style": "Tshirts",
     "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10469.jpg",
     "product_url": "https://example.com/product/10469"
   },
   {
-    "name": "U.S. Polo Assn. Men Checks Maroon Shirt",
-    "description": "A Maroon Shirt for Casual use in Fall 2011.0.",
+    "name": "U.S. Polo Maroon Check Shirt",
+    "description": "Classic maroon check shirt with a soft touch and casual fit.",
     "color": "Maroon",
     "style": "Shirts",
     "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/17169.jpg",
     "product_url": "https://example.com/product/17169"
+  },
+  {
+    "name": "Roadster Navy Slim Fit Jeans",
+    "description": "Slim fit navy jeans that match almost any top for a stylish look.",
+    "color": "Navy",
+    "style": "Jeans",
+    "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/10283.jpg",
+    "product_url": "https://example.com/product/10283"
+  },
+  {
+    "name": "HRX Black Training Shorts",
+    "description": "Comfortable black shorts ideal for sports and everyday wear.",
+    "color": "Black",
+    "style": "Shorts",
+    "image_url": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/17296.jpg",
+    "product_url": "https://example.com/product/17296"
   }
 ]

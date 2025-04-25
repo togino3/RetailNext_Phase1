@@ -1,5 +1,73 @@
+# 📁 gpt_product_recommender.py
+import json
+import numpy as np
+import faiss
+from openai import OpenAI
+from typing import List, Dict
 import streamlit as st
-import openai
+
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+# --- 商品ベクトル埋め込み ---
+def embed_product_text(product: Dict) -> List[float]:
+    text = f"{product['name']}. {product['description']}. Color: {product['color']}. Style: {product['style']}."
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+    return response.data[0].embedding
+
+# --- 商品検索インデックス構築 ---
+def build_index(products: List[Dict]):
+    embeddings = [embed_product_text(p) for p in products]
+    index = faiss.IndexFlatL2(len(embeddings[0]))
+    index.add(np.array(embeddings).astype("float32"))
+    return index, embeddings
+
+# --- GPTによる推薦文生成 ---
+def generate_recommendation(user_profile: Dict, matched_products: List[Dict]) -> str:
+    system_msg = """
+You are a fashion assistant. Based on the user's description and the matching items, recommend the best one in natural language.
+"""
+    user_msg = f"""
+User Profile:
+- Gender: {user_profile['gender']}
+- Theme: {user_profile['theme']}
+- Favorite Color: {user_profile['color']}
+
+Matching Items:
+"""
+    for i, item in enumerate(matched_products):
+        user_msg += f"{i+1}. {item['name']} - {item['description']}\n"
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_msg}
+        ]
+    )
+    return response.choices[0].message.content
+
+# --- Streamlit連携関数 ---
+def recommend_with_gpt_streamlit(user_profile: Dict, products_file: str = "products.json", top_k: int = 3):
+    with open(products_file) as f:
+        products = json.load(f)
+
+    st.info("🔍 Generating smart recommendation with GPT-4o...")
+
+    # インデックス構築
+    index, _ = build_index(products)
+    query_text = f"{user_profile['theme']} fashion for {user_profile['gender']}, favorite color: {user_profile['color']}"
+    query_emb = client.embeddings.create(model="text-embedding-3-small", input=query_text).data[0].embedding
+
+    D, I = index.search(np.array([query_emb]).astype("float32"), k=top_k)
+    matched = [products[i] for i in I[0]]
+    return generate_recommendation(user_profile, matched)
+
+
+# 📁 app.py
+import streamlit as st
 from openai import OpenAI
 from PIL import Image
 import requests
@@ -7,16 +75,13 @@ from io import BytesIO
 import json
 import os
 import uuid
-import numpy as np
-import faiss
-from typing import List, Dict
+from gpt_product_recommender import recommend_with_gpt_streamlit
 
-# --- OpenAI Client Setup ---
+# --- Setup ---
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 
 POSTS_FILE = "posts.json"
-PRODUCTS_FILE = "products.json"
 
 # --- Post Management ---
 if "posts" not in st.session_state:
@@ -40,60 +105,6 @@ def like_post(post_id):
             post["likes"] += 1
     with open(POSTS_FILE, "w") as f:
         json.dump(st.session_state["posts"], f, indent=2)
-
-# --- GPT Recommendation (Embedding + FAISS + GPT-4o) ---
-def embed_product_text(product: Dict) -> List[float]:
-    text = f"{product['name']}. {product['description']}. Color: {product['color']}. Style: {product['style']}."
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=text
-    )
-    return response.data[0].embedding
-
-def build_index(products: List[Dict]):
-    embeddings = [embed_product_text(p) for p in products]
-    index = faiss.IndexFlatL2(len(embeddings[0]))
-    index.add(np.array(embeddings).astype("float32"))
-    return index, embeddings
-
-def generate_recommendation(user_profile: Dict, matched_products: List[Dict]) -> str:
-    system_msg = """
-You are a fashion assistant. Based on the user's description and the matching items, recommend the best one in natural language.
-"""
-    user_msg = f"""
-User Profile:
-- Gender: {user_profile['gender']}
-- Theme: {user_profile['theme']}
-- Favorite Color: {user_profile['color']}
-
-Matching Items:
-"""
-    for i, item in enumerate(matched_products):
-        user_msg += f"{i+1}. {item['name']} - {item['description']}
-"
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_msg},
-            {"role": "user", "content": user_msg}
-        ]
-    )
-    return response.choices[0].message.content
-
-def recommend_with_gpt_streamlit(user_profile: Dict, products_file: str = "products.json", top_k: int = 5):
-    with open(products_file) as f:
-        products = json.load(f)
-
-    st.info("🔍 Generating smart recommendation with GPT-4o...")
-
-    index, _ = build_index(products)
-    query_text = f"{user_profile['theme']} fashion for {user_profile['gender']}, favorite color: {user_profile['color']}"
-    query_emb = client.embeddings.create(model="text-embedding-3-small", input=query_text).data[0].embedding
-
-    D, I = index.search(np.array([query_emb]).astype("float32"), k=top_k)
-    matched = [products[i] for i in I[0]]
-    return generate_recommendation(user_profile, matched), matched
 
 # --- UI Layout ---
 tab1, tab2 = st.tabs(["🧐 AI Coordinator", "🌐 Community Gallery"])
@@ -158,18 +169,12 @@ Generate a full-body anime-style fashion coordination image for one person, base
             "likes": 0
         })
 
+        # --- GPTベース推薦 ---
         st.subheader("🧠 GPT's Recommendation")
         user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
         try:
-            rec_text, matched = recommend_with_gpt_streamlit(user_profile)
-            st.markdown(rec_text)
-
-            st.markdown("### 🖼️ Top 5 Matching Items")
-            cols = st.columns(5)
-            for i, item in enumerate(matched):
-                with cols[i % 5]:
-                    st.image(item["image_url"], caption=item["name"], use_container_width=True)
-                    st.markdown(f"[🛒 View Product]({item['product_url']})", unsafe_allow_html=True)
+            recommendation = recommend_with_gpt_streamlit(user_profile)
+            st.markdown(recommendation)
         except Exception as e:
             st.error("GPT recommendation failed")
             st.exception(e)
