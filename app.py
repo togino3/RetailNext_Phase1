@@ -56,7 +56,7 @@ def get_embedding_3small(text: str, api_key: str):
     response.raise_for_status()
     return np.array(response.json()["data"][0]["embedding"], dtype=np.float32)
 
-def recommend_from_embedded_json(user_profile: Dict, top_k: int = 5):
+def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
     with open(EMBEDDED_JSON_FILE, "r") as f:
         items = json.load(f)
 
@@ -122,7 +122,12 @@ with tab1:
         try:
             response = client.images.generate(
                 model="dall-e-3",
-                prompt=f"Full-body anime-style fashion image of a {gender}, age {age}, body shape {body_shape}, color {favorite_color}, theme {fashion_theme}, style {draw_style}. White background.",
+                prompt=(
+    f"Full-body anime-style fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
+    f"wearing seasonally appropriate, modest, fashionable clothing in {favorite_color} color, themed around {fashion_theme}. "
+    f"The outfit should cover shoulders and knees, avoid revealing skin, and reflect elegance. "
+    f"Style: {draw_style}. White background."
+),
                 size="1024x1024",
                 quality="standard",
                 n=1
@@ -149,7 +154,7 @@ with tab1:
         st.subheader("🧠 Similar Items Recommendation")
         user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
         try:
-            similar = recommend_from_embedded_json(user_profile)
+            similar = recommend_from_embedded_json(user_profile, top_k=3)
             cols = st.columns(3)
             for i, item in enumerate(similar):
                 with cols[i % 3]:
