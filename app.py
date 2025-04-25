@@ -61,17 +61,12 @@ def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
         f"color: {user_profile['color']}, suitable for ceremony or special event."
     )
 
-    # --- Embedding Generation with Model Verification ---
     embedding_response = client.embeddings.create(
         model="text-embedding-ada-002",
         input=query_text
     )
     model_used = embedding_response.model
     embedding = np.array(embedding_response.data[0].embedding, dtype=np.float32)
-    print(">>> [DEBUG] embedding_response.model:", embedding_response.model)
-    print("\n>>> [DEBUG] Embedding model used:", model_used)
-    print(">>> [DEBUG] Query embedding dimension:", embedding.shape)
-    print(">>> [DEBUG] Product vector shape:", all_vectors.shape)
 
     if embedding.shape[0] != all_vectors.shape[1]:
         raise ValueError(f"Embedding dimension mismatch: user={embedding.shape[0]}, product={all_vectors.shape[1]}")
@@ -161,10 +156,8 @@ with tab1:
             rec_text, matched = recommend_from_precomputed(user_profile)
             st.markdown(rec_text)
             st.markdown("### 🍭 Recommend Item")
-            cols = st.columns(3)
-            for i, item in enumerate(matched):
-                with cols[i % 3]:
-                    st.image(item.get("imageUrl", ""), caption=item["productDisplayName"], use_container_width=True)
+            for item in matched:
+                st.markdown(f"**{item['productDisplayName']}** - {item['gender']}, {item['baseColour']}, {item['articleType']}")
         except Exception as e:
             st.error("Recommendation failed")
             st.exception(e)
