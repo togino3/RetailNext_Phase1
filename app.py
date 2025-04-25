@@ -69,8 +69,7 @@ User Profile:
 Matching Items:
 """
     for i, item in enumerate(matched_products):
-        user_msg += f"{i+1}. {item['name']} - {item['description']}
-"
+        user_msg += f"{i+1}. {item['name']} - {item['description']}"
 
     response = client.chat.completions.create(
         model="gpt-4o",
