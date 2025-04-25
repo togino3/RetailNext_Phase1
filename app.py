@@ -188,4 +188,4 @@ with tab2:
                     st.markdown(f"❤️ {post['likes']} likes")
                     if st.button("👍 Like", key=post["id"]):
                         like_post(post["id"])
-                        st.experimental_rerun()
+                        st.rerun()
