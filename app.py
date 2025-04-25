@@ -16,7 +16,7 @@ st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 POSTS_FILE = "posts.json"
-EMBEDDED_JSON_FILE = "embedded_products.json"
+EMBEDDED_JSON_FILE = "embedded_products_with_id.json"
 
 # --- Post Management ---
 if "posts" not in st.session_state:
@@ -130,6 +130,8 @@ with tab1:
         try:
             similar = recommend_from_embedded_json(user_profile)
             for item in similar:
+                image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
+                st.image(image_url, width=200)
                 st.markdown(f"**{item['productDisplayName']}** - {item['gender']}, {item['baseColour']}, {item['season']}, {item['usage']}")
         except Exception as e:
             st.error("Recommendation failed")
