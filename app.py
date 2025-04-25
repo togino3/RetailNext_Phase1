@@ -46,14 +46,13 @@ def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
     df = pd.read_csv(EMBEDDINGS_FILE)
     df["embedding"] = df["embeddings"].apply(lambda x: np.array(ast.literal_eval(x), dtype=np.float32))
 
-    # --- Step 1: filter by gender and color ---
     df_filtered = df[
         (df["gender"].str.lower() == user_profile["gender"].lower()) &
         (df["baseColour"].str.lower().str.contains(user_profile["color"].lower(), na=False))
     ]
 
     if df_filtered.empty:
-        df_filtered = df  # fallback to all if no match
+        df_filtered = df  # fallback if no matches
 
     all_vectors = np.stack(df_filtered["embedding"].values)
 
@@ -62,8 +61,19 @@ def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
         f"color: {user_profile['color']}, suitable for ceremony or special event."
     )
 
-    embedding = client.embeddings.create(model="text-embedding-ada-002", input=query_text).data[0].embedding
-    embedding = np.array(embedding, dtype=np.float32)
+    # --- Embedding Generation with Model Verification ---
+    embedding_response = client.embeddings.create(
+        model="text-embedding-ada-002",
+        input=query_text
+    )
+    model_used = embedding_response.model
+    embedding = np.array(embedding_response.data[0].embedding, dtype=np.float32)
+    print("\n>>> [DEBUG] Embedding model used:", model_used)
+    print(">>> [DEBUG] Query embedding dimension:", embedding.shape)
+    print(">>> [DEBUG] Product vector shape:", all_vectors.shape)
+
+    if embedding.shape[0] != all_vectors.shape[1]:
+        raise ValueError(f"Embedding dimension mismatch: user={embedding.shape[0]}, product={all_vectors.shape[1]}")
 
     scores = np.dot(all_vectors, embedding) / (
         np.linalg.norm(all_vectors, axis=1) * np.linalg.norm(embedding) + 1e-5
@@ -149,7 +159,7 @@ with tab1:
         try:
             rec_text, matched = recommend_from_precomputed(user_profile)
             st.markdown(rec_text)
-            st.markdown("### 🛍 Recommend Item")
+            st.markdown("### 🍭 Recommend Item")
             cols = st.columns(3)
             for i, item in enumerate(matched):
                 with cols[i % 3]:
