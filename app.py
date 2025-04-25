@@ -16,7 +16,7 @@ st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 POSTS_FILE = "posts.json"
-EMBEDDINGS_FILE = "sample_styles_with_embeddings.csv"
+EMBEDDINGS_FILE = "sample_styles_with_embeddings_with_image.csv"
 
 # --- Post Management ---
 if "posts" not in st.session_state:
@@ -51,7 +51,7 @@ def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
         f"color: {user_profile['color']}, suitable for ceremony or special event."
     )
 
-    embedding = client.embeddings.create(model="text-embedding-3-small", input=query_text).data[0].embedding
+    embedding = client.embeddings.create(model="text-embedding-ada-002", input=query_text).data[0].embedding
     embedding = np.array(embedding, dtype=np.float32)
 
     all_vectors = np.stack(df["embedding"].values)
@@ -152,7 +152,7 @@ with tab2:
     posts = load_posts()
     top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
     if top_posts:
-        st.subheader("🔥 Top 5 Popular Coordinations")
+        st.subheader("🛍 Recommended Products")
         for i, post in enumerate(top_posts):
             with st.container():
                 st.markdown(f"### #{i+1} ❤️ {post['likes']} Likes")
