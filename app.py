@@ -42,6 +42,22 @@ def like_post(post_id):
         json.dump(st.session_state["posts"], f, indent=2)
 
 # --- 類似検索 + GPT推薦 ---
+import requests  # ← 追記必要（ファイル冒頭）
+
+def get_embedding_ada002(text: str, api_key: str):
+    url = "https://api.openai.com/v1/embeddings"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "input": text,
+        "model": "text-embedding-ada-002"
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+    return np.array(response.json()["data"][0]["embedding"], dtype=np.float32)
+
 def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
     df = pd.read_csv(EMBEDDINGS_FILE)
     df["embedding"] = df["embeddings"].apply(lambda x: np.array(ast.literal_eval(x), dtype=np.float32))
@@ -52,7 +68,7 @@ def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
     ]
 
     if df_filtered.empty:
-        df_filtered = df  # fallback if no matches
+        df_filtered = df
 
     all_vectors = np.stack(df_filtered["embedding"].values)
 
@@ -61,12 +77,7 @@ def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
         f"color: {user_profile['color']}, suitable for ceremony or special event."
     )
 
-    embedding_response = client.embeddings.create(
-        model="text-embedding-ada-002",
-        input=query_text
-    )
-    model_used = embedding_response.model
-    embedding = np.array(embedding_response.data[0].embedding, dtype=np.float32)
+    embedding = get_embedding_ada002(query_text, st.secrets["OPENAI_API_KEY"])
 
     if embedding.shape[0] != all_vectors.shape[1]:
         raise ValueError(f"Embedding dimension mismatch: user={embedding.shape[0]}, product={all_vectors.shape[1]}")
@@ -91,6 +102,7 @@ Top Matching Items:
     """
 
     system_msg = "You are a fashion AI assistant. Please recommend items based on user's profile and the matching product list. Prioritize items that match gender and color exactly."
+
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -100,6 +112,7 @@ Top Matching Items:
     )
 
     return response.choices[0].message.content, top_items.to_dict(orient="records")
+
 
 # --- UI Layout ---
 tab1, tab2 = st.tabs(["🧐 AI Coordinator", "🌐 Community Gallery"])
