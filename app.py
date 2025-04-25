@@ -8,7 +8,6 @@ import json
 import os
 import uuid
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 import faiss
 
 # --- Setup ---
@@ -16,9 +15,7 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
 
 POSTS_FILE = "posts.json"
-FEATURES_FILE = "features.json"
 PRODUCTS_FILE = "products.json"
-SAMPLE_IMAGES_URL = "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/"
 
 # --- Post Management ---
 if "posts" not in st.session_state:
@@ -42,35 +39,6 @@ def like_post(post_id):
             post["likes"] += 1
     with open(POSTS_FILE, "w") as f:
         json.dump(st.session_state["posts"], f, indent=2)
-
-@st.cache_data
-def load_feature_vectors():
-    with open(FEATURES_FILE, "r") as f:
-        data = json.load(f)
-    for item in data:
-        item["feature_vector"] = np.array(item["feature_vector"])
-    return data
-
-# --- 類似画像推薦 ---
-def extract_color_vector_from_PIL(pil_image):
-    image = pil_image.resize((32, 32)).convert("RGB")
-    arr = np.array(image).reshape(-1, 3)
-    return np.mean(arr, axis=0)
-
-def find_similar_images_from_PIL(pil_image, target_gender, top_k=3):
-    base_rgb = np.array(pil_image.resize((64, 64)).convert("RGB"))
-    center_rgb = base_rgb[16:48, 16:48].reshape(-1, 3)
-    mean_rgb = np.mean(center_rgb, axis=0)
-    features = load_feature_vectors()
-    similarities = []
-    for item in features:
-        if item["gender"] != target_gender:
-            continue
-        vec = np.array(item["feature_vector"])
-        sim = cosine_similarity([mean_rgb], [vec[3:]])[0][0]
-        full_url = SAMPLE_IMAGES_URL + item["filename"]
-        similarities.append((sim, full_url))
-    return [url for _, url in sorted(similarities, reverse=True)[:top_k]]
 
 # --- GPT推薦用関数 ---
 def embed_product_text(product):
@@ -116,7 +84,7 @@ def recommend_with_gpt(user_profile, products_file=PRODUCTS_FILE, top_k=3):
     return generate_recommendation(user_profile, matched)
 
 # --- UI Layout ---
-tab1, tab2 = st.tabs(["🧠 AI Coordinator", "🌐 Community Gallery"])
+tab1, tab2 = st.tabs(["🧐 AI Coordinator", "🌐 Community Gallery"])
 
 with tab1:
     st.title("🌟 RetailNext Coordinator")
@@ -129,7 +97,7 @@ with tab1:
         body_shape = st.selectbox("Body Shape", ["Slim", "Regular", "Curvy"])
         favorite_color = st.text_input("🎨 Favorite Color (e.g., black, pink)")
         draw_style = st.selectbox("Drawing Style", ["Disney", "American Comic", "Japanese Anime", "3D CG"])
-        fashion_theme = st.text_input("🧵 Fashion Theme (e.g., spring, bright)")
+        fashion_theme = st.text_input("🍝 Fashion Theme (e.g., spring, bright)")
         submitted = st.form_submit_button("✨ Generate AI Coordination")
 
     if submitted and uploaded_image:
@@ -170,16 +138,6 @@ Generate a full-body anime-style fashion coordination image for one person, base
         os.makedirs("generated", exist_ok=True)
         with open(local_path, "wb") as f:
             f.write(dalle_img_response.content)
-        dalle_image = Image.open(local_path)
-
-        category = "Top" if "shirt" in fashion_theme.lower() or "top" in fashion_theme.lower() else "Bottom"
-        st.subheader("🛍 Similar Items")
-        similar_images = find_similar_images_from_PIL(dalle_image, gender)
-        cols = st.columns(5)
-        for i, url in enumerate(similar_images):
-            with cols[i % 5]:
-                st.image(url, use_container_width=True)
-                st.markdown(f"[🛒 Add to Cart](#)", unsafe_allow_html=True)
 
         save_post({
             "id": str(uuid.uuid4()),
@@ -224,10 +182,10 @@ with tab2:
                     st.markdown(f"**🌍 Country:** {post['country']}")
                     st.markdown(f"**👤 Gender:** {post['gender']} / 🎂 Age: {post['age']}")
                     st.markdown(f"**💪 Body Shape:** {post.get('body_shape', 'N/A')} / 🎨 Color: {post['color']}")
-                    st.markdown(f"**🎞️ Style:** {post['style']}")
+                    st.markdown(f"**🎮 Style:** {post['style']}")
         st.markdown("---")
 
-    st.subheader("🧑‍🤝‍🧑 All Community Posts")
+    st.subheader("🧑‍🧱 All Community Posts")
     if not posts:
         st.info("No posts yet.")
     else:
@@ -244,7 +202,7 @@ with tab2:
                     st.markdown(f"**🌍 Country:** {post['country']}")
                     st.markdown(f"**👤 Gender:** {post['gender']} / 🎂 Age: {post['age']}")
                     st.markdown(f"**💪 Body Shape:** {post.get('body_shape', 'N/A')} / 🎨 Color: {post['color']}")
-                    st.markdown(f"**🎞️ Style:** {post['style']}")
+                    st.markdown(f"**🎮 Style:** {post['style']}")
                     st.markdown(f"❤️ {post['likes']} likes")
                     if st.button("👍 Like", key=post["id"]):
                         like_post(post["id"])
