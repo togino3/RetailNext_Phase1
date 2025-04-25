@@ -68,7 +68,7 @@ def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
     )
     model_used = embedding_response.model
     embedding = np.array(embedding_response.data[0].embedding, dtype=np.float32)
-print(">>> [DEBUG] embedding_response.model:", embedding_response.model)
+    print(">>> [DEBUG] embedding_response.model:", embedding_response.model)
     print("\n>>> [DEBUG] Embedding model used:", model_used)
     print(">>> [DEBUG] Query embedding dimension:", embedding.shape)
     print(">>> [DEBUG] Product vector shape:", all_vectors.shape)
