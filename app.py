@@ -1,23 +1,23 @@
 
 import streamlit as st
-import openai
+import json
+import numpy as np
 from openai import OpenAI
+from typing import List, Dict
 from PIL import Image
 import requests
 from io import BytesIO
-import json
-import os
 import uuid
-import numpy as np
-import faiss
-from typing import List, Dict
+import os
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# --- Setup ---
 st.set_page_config(page_title="🌟 RetailNext Coordinator", layout="wide")
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 POSTS_FILE = "posts.json"
-PRODUCTS_FILE = "products.json"
+PRODUCTS_FILE = "products_with_embeddings_cleaned.json"
 
+# --- Post Management ---
 if "posts" not in st.session_state:
     if os.path.exists(POSTS_FILE):
         with open(POSTS_FILE, "r") as f:
@@ -40,25 +40,30 @@ def like_post(post_id):
     with open(POSTS_FILE, "w") as f:
         json.dump(st.session_state["posts"], f, indent=2)
 
-def embed_product_text(product: Dict) -> List[float]:
-    text = f"This is a {product['style']} called {product['name']}. It is mainly {product['color']} and suitable for {product['description']}."
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=text
-    )
-    return response.data[0].embedding
+# --- 類似検索 + GPT推薦 ---
+def recommend_from_precomputed(user_profile: Dict, top_k: int = 3):
+    with open(PRODUCTS_FILE, "r") as f:
+        products = json.load(f)
 
-def build_index(products: List[Dict]):
-    embeddings = [embed_product_text(p) for p in products]
-    index = faiss.IndexFlatL2(len(embeddings[0]))
-    index.add(np.array(embeddings).astype("float32"))
-    return index, embeddings
+    query_text = f"{user_profile['theme']} fashion for {user_profile['gender']}, favorite color: {user_profile['color']}"
+    embedding = client.embeddings.create(model="text-embedding-3-small", input=query_text).data[0].embedding
+    embedding = np.array(embedding, dtype=np.float32)
 
-def generate_recommendation(user_profile: Dict, matched_products: List[Dict]) -> str:
-    system_msg = "You are a fashion assistant. Based on the user's description and the matching items, recommend the best one in natural language."
-    user_msg = f"""User is a {user_profile['gender']} looking for {user_profile['theme']} style clothing.\nThey prefer the color {user_profile['color']}. Age: {user_profile['age']}, Body shape: {user_profile['body_shape']}, Style: {user_profile['style']}.\nMatching Items:\n"""
-    for i, item in enumerate(matched_products):
-        user_msg += f"{i+1}. {item['name']} - {item['description']}\n"
+    all_vectors = np.array([p["embedding"] for p in products], dtype=np.float32)
+    scores = np.dot(all_vectors, embedding) / (np.linalg.norm(all_vectors, axis=1) * np.linalg.norm(embedding) + 1e-5)
+    top_indices = np.argsort(scores)[-top_k:][::-1]
+    matched = [products[i] for i in top_indices]
+
+    system_msg = "You are a fashion assistant. Based on the user's description and the matching items, recommend the best ones in natural language."
+    user_msg = f"""
+User Profile:
+- Gender: {user_profile['gender']}
+- Theme: {user_profile['theme']}
+- Favorite Color: {user_profile['color']}
+
+Matching Items:
+""" + "\n".join([f"{i+1}. {item['name']} - {item['description']}" for i, item in enumerate(matched)])
+
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -66,20 +71,10 @@ def generate_recommendation(user_profile: Dict, matched_products: List[Dict]) ->
             {"role": "user", "content": user_msg}
         ]
     )
-    return response.choices[0].message.content
+    return response.choices[0].message.content, matched
 
-def recommend_with_gpt_streamlit(user_profile: Dict, products_file: str = "products.json", top_k: int = 3):
-    with open(products_file) as f:
-        products = json.load(f)
-    st.info("🔍 Generating smart recommendation with GPT-4o...")
-    index, _ = build_index(products)
-    query_text = f"{user_profile['theme']} fashion for {user_profile['gender']}, prefers {user_profile['color']}, shape {user_profile['body_shape']}, age {user_profile['age']}"
-    query_emb = client.embeddings.create(model="text-embedding-3-small", input=query_text).data[0].embedding
-    D, I = index.search(np.array([query_emb]).astype("float32"), k=top_k)
-    matched = [products[i] for i in I[0]]
-    return generate_recommendation(user_profile, matched), matched
-
-tab1, tab2 = st.tabs(["🧐 AI Coordinator", "🌐 Community Gallery"])
+# --- UI Layout ---
+tab1, tab2 = st.tabs(["🧠 AI Coordinator", "🌐 Community Gallery"])
 
 with tab1:
     st.title("🌟 RetailNext Coordinator")
@@ -99,20 +94,24 @@ with tab1:
         image = Image.open(uploaded_image)
         buffered = BytesIO()
         image.save(buffered, format="PNG")
-        img_bytes = buffered.getvalue()
-        user_prompt = f"""Generate a full-body anime-style fashion coordination image for one person with: Country={country}, Gender={gender}, Age={age}, Body Shape={body_shape}, Favorite Color={favorite_color}, Theme={fashion_theme}, Drawing Style={draw_style}. White background, clearly clothed, natural face."""
-        response = client.images.generate(
-            model="dall-e-3",
-            prompt=user_prompt,
-            size="1024x1024",
-            quality="standard",
-            n=1
-        )
-        image_url = response.data[0].url
-        st.image(image_url, caption="👕 AI Coordination Suggestion", width=300)
+        image_url = None
+        try:
+            response = client.images.generate(
+                model="dall-e-3",
+                prompt=f"Full-body anime-style fashion image of a {gender}, age {age}, body shape {body_shape}, color {favorite_color}, theme {fashion_theme}, style {draw_style}. White background.",
+                size="1024x1024",
+                quality="standard",
+                n=1
+            )
+            image_url = response.data[0].url
+            st.image(image_url, caption="👕 AI Coordination Suggestion", width=300)
+        except Exception as e:
+            st.error("Image generation failed")
+            st.exception(e)
+
         save_post({
             "id": str(uuid.uuid4()),
-            "image_url": image_url,
+            "image_url": image_url if image_url else "N/A",
             "country": country,
             "gender": gender,
             "age": age,
@@ -124,16 +123,9 @@ with tab1:
         })
 
         st.subheader("🧠 GPT's Recommendation")
-        user_profile = {
-            "gender": gender,
-            "theme": fashion_theme,
-            "color": favorite_color,
-            "age": age,
-            "body_shape": body_shape,
-            "style": draw_style
-        }
+        user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
         try:
-            rec_text, matched = recommend_with_gpt_streamlit(user_profile)
+            rec_text, matched = recommend_from_precomputed(user_profile)
             st.markdown(rec_text)
             st.markdown("### 🖼️ Top 3 Matching Items")
             cols = st.columns(3)
@@ -142,7 +134,7 @@ with tab1:
                     st.image(item["image_url"], caption=item["name"], use_container_width=True)
                     st.markdown(f"[🛒 View Product]({item['product_url']})", unsafe_allow_html=True)
         except Exception as e:
-            st.error("GPT recommendation failed")
+            st.error("Recommendation failed")
             st.exception(e)
 
 with tab2:
@@ -155,37 +147,28 @@ with tab2:
                 st.markdown(f"### #{i+1} ❤️ {post['likes']} Likes")
                 col1, col2 = st.columns([1, 2])
                 with col1:
-                    image_path = post["image_url"]
-                    if not image_path.startswith("http"):
-                        image_path = os.path.join(".", image_path)
-                    st.image(image_path, width=150)
+                    st.image(post["image_url"], width=150)
                 with col2:
                     st.markdown(f"**🧵 Theme:** {post['theme']}")
                     st.markdown(f"**🌍 Country:** {post['country']}")
                     st.markdown(f"**👤 Gender:** {post['gender']} / 🎂 Age: {post['age']}")
-                    st.markdown(f"**🏋️ Body Shape:** {post.get('body_shape', 'N/A')} / 🎨 Color: {post['color']}")
-                    st.markdown(f"**🎮 Style:** {post['style']}")
-        st.markdown("---")
+                    st.markdown(f"**💪 Body Shape:** {post['body_shape']} / 🎨 Color: {post['color']}")
+                    st.markdown(f"**🎞️ Style:** {post['style']}")
+    st.markdown("---")
 
-    st.subheader("🧑‍📽️ All Community Posts")
-    if not posts:
-        st.info("No posts yet.")
-    else:
-        for post in reversed(posts[:20]):
-            with st.container():
-                col1, col2 = st.columns([1, 2])
-                with col1:
-                    image_path = post["image_url"]
-                    if not image_path.startswith("http"):
-                        image_path = os.path.join(".", image_path)
-                    st.image(image_path, width=150)
-                with col2:
-                    st.markdown(f"**🧵 Theme:** {post['theme']}")
-                    st.markdown(f"**🌍 Country:** {post['country']}")
-                    st.markdown(f"**👤 Gender:** {post['gender']} / 🎂 Age: {post['age']}")
-                    st.markdown(f"**🏋️ Body Shape:** {post.get('body_shape', 'N/A')} / 🎨 Color: {post['color']}")
-                    st.markdown(f"**🎮 Style:** {post['style']}")
-                    st.markdown(f"❤️ {post['likes']} likes")
-                    if st.button("👍 Like", key=post["id"]):
-                        like_post(post["id"])
-                        st.rerun()
+    st.subheader("🧑‍🤝‍🧑 All Community Posts")
+    for post in reversed(posts[:20]):
+        with st.container():
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                st.image(post["image_url"], width=150)
+            with col2:
+                st.markdown(f"**🧵 Theme:** {post['theme']}")
+                st.markdown(f"**🌍 Country:** {post['country']}")
+                st.markdown(f"**👤 Gender:** {post['gender']} / 🎂 Age: {post['age']}")
+                st.markdown(f"**💪 Body Shape:** {post['body_shape']} / 🎨 Color: {post['color']}")
+                st.markdown(f"**🎞️ Style:** {post['style']}")
+                st.markdown(f"❤️ {post['likes']} likes")
+                if st.button("👍 Like", key=post["id"]):
+                    like_post(post["id"])
+                    st.experimental_rerun()
