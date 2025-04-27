@@ -113,7 +113,7 @@ def generate_simple_recommendation(items: List[Dict]):
 tab1, tab2 = st.tabs(["🛍️ RetailNext Coordinator", "🌟 Popular Coordinations"])
 
 with tab1:
-    st.title("🛍️ RetailNext Coordinator")
+    st.subheader("🛍️ RetailNext Coordinator")
 
     with st.form("✨ Personalize Your Look"):
         uploaded_image = st.file_uploader("Upload your face photo", type=["jpg", "jpeg", "png"])
