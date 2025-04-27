@@ -131,7 +131,7 @@ with tab1:
         image = Image.open(uploaded_image)
         buffered = BytesIO()
         image.save(buffered, format="PNG")
-        image_url = None
+
         original_prompt = (
             f"Full-body anime-style fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
             f"wearing seasonally appropriate, modest, fashionable clothing in {favorite_color} color, themed around {fashion_theme}. "
@@ -148,6 +148,9 @@ with tab1:
                 n=1
             )
             image_url = response.data[0].url
+            st.session_state["original_prompt"] = original_prompt
+            st.session_state["original_image_url"] = image_url
+
             st.image(image_url, caption="👕 AI Coordination Suggestion", width=600)
             st.markdown("🔗 **Share on SNS：** [Share on SNS](https://dummy-share-url.com)")
             st.info(
@@ -172,18 +175,22 @@ with tab1:
             "likes": 0
         })
 
-        # --- User Feedback Refinement ---
-        st.markdown("### 🎨 Want to adjust the coordination?")
-        user_feedback = st.text_input("💬 Tell us your preference (e.g., 'Make it more casual', 'Use brighter colors')")
+# --- Always show refinement section if initial image exists ---
+if "original_prompt" in st.session_state:
+    st.markdown("### 🎨 Want to adjust the coordination?")
+    user_feedback = st.text_input("💬 Tell us your preference (e.g., 'Make it more casual', 'Use brighter colors')")
 
-        if st.button("🔄 Update Coordination with Your Feedback"):
+    if st.button("🔄 Update Coordination with Your Feedback"):
+        if not user_feedback.strip():
+            st.warning("⚠️ Please enter your feedback before updating the coordination.")
+        else:
             with st.spinner("Updating your coordination..."):
                 try:
                     refinement_prompt = client.chat.completions.create(
                         model="gpt-4o",
                         messages=[
                             {"role": "system", "content": "You are a prompt engineer specializing in improving fashion illustration prompts for DALL-E 3."},
-                            {"role": "user", "content": f"The original prompt was:\n{original_prompt}\n\nUser feedback is:\n{user_feedback}\n\nPlease refine the prompt accordingly."}
+                            {"role": "user", "content": f"The original prompt was:\n{st.session_state['original_prompt']}\n\nUser feedback is:\n{user_feedback}\n\nPlease refine the prompt accordingly."}
                         ],
                         temperature=0.2
                     ).choices[0].message.content.strip()
@@ -204,26 +211,7 @@ with tab1:
                     st.error("Failed to update coordination.")
                     st.exception(e)
 
-        st.subheader("🛒 Your Recommended Items")
-        user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
-        try:
-            similar = recommend_from_embedded_json(user_profile, top_k=3)
-            gpt_recommendation = generate_simple_recommendation(similar)
-            st.info(gpt_recommendation)
-
-            cols = st.columns(3)
-            for i, item in enumerate(similar):
-                with cols[i % 3]:
-                    image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
-                    st.image(image_url, width=200)
-                    st.markdown(f"**{item['productDisplayName']}**\n{item['gender']}, {item['baseColour']}\n{item['season']} / {item['usage']}")
-                    if st.button("🛒 Go to EC Site", key=f"ec_button_{item['id']}"):
-                        st.info("This would navigate to the EC site.")
-
-        except Exception as e:
-            st.error("Recommendation failed")
-            st.exception(e)
-
+# --- Community Gallery ---
 with tab2:
     posts = load_posts()
     top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
