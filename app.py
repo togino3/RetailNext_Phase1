@@ -88,7 +88,7 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
     scores = np.dot(all_vectors, embedding) / (
         np.linalg.norm(all_vectors, axis=1) * np.linalg.norm(embedding) + 1e-5
     )
-    for i, score in enumerate(scores:
+    for i, score in enumerate(scores):
         filtered_items[i]["score"] = score
 
     top_items = sorted(filtered_items, key=lambda x: x["score"], reverse=True)[:top_k]
