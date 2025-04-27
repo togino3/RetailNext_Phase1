@@ -110,7 +110,7 @@ def generate_simple_recommendation(items: List[Dict]):
     return response.choices[0].message.content.strip()
 
 # --- UI Layout ---
-tab1, tab2 = st.tabs(["🛍️ RetailNext Coordinator", "🌟 Popular Coordinations"])
+tab1, tab2 = st.tabs(["🛍️ RetailNext Coordinator", "🌐 Community Gallery"])
 
 with tab1:
     st.subheader("🛍️ RetailNext Coordinator")
@@ -146,6 +146,12 @@ with tab1:
             )
             image_url = response.data[0].url
             st.image(image_url, caption="👕 AI Coordination Suggestion", width=300)
+            st.markdown("🔗 **Share on SNS：** [Share on SNS](https://dummy-share-url.com)")
+            st.info(
+                "📢 The generated coordination will also be shared in the Community Gallery.\n\n"
+                "Click on your favorite image to view related recommended items!"
+            )
+
         except Exception as e:
             st.error("Image generation failed")
             st.exception(e)
@@ -176,6 +182,8 @@ with tab1:
                     image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
                     st.image(image_url, width=200)
                     st.markdown(f"**{item['productDisplayName']}**\n{item['gender']}, {item['baseColour']}\n{item['season']} / {item['usage']}")
+                    if st.button("🛒 Go to EC Site", key=f"ec_button_{item['id']}"):
+                        st.info("This would navigate to the EC site.")
         except Exception as e:
             st.error("Recommendation failed")
             st.exception(e)
