@@ -80,7 +80,7 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
 
     query_text = (
         f"{user_profile['theme']} fashion for {user_profile['gender']}, "
-        f"color: {user_profile['color']}, suitable for ceremony or special event."
+        f"color: {user_profile['color']}"
     )
     embedding = get_embedding_3small(query_text, st.secrets["OPENAI_API_KEY"])
 
@@ -110,20 +110,20 @@ def generate_simple_recommendation(items: List[Dict]):
     return response.choices[0].message.content.strip()
 
 # --- UI Layout ---
-tab1, tab2 = st.tabs(["🧐 AI Coordinator", "🌐 Community Gallery"])
+tab1, tab2 = st.tabs(["🛍️ RetailNext Coordinator", "🌟 Popular Coordinations"])
 
 with tab1:
-    st.title("🌟 RetailNext Coordinator")
+    st.title("🛍️ RetailNext Coordinator")
 
-    with st.form("fashion_form"):
-        uploaded_image = st.file_uploader("😊 Upload your face photo", type=["jpg", "jpeg", "png"])
-        country = st.text_input("🌍 Country (e.g., USA, Japan, etc.)")
+    with st.form("✨ Personalize Your Look"):
+        uploaded_image = st.file_uploader("Upload your face photo", type=["jpg", "jpeg", "png"])
+        country = st.text_input("Country (e.g., USA, Japan, etc.)")
         gender = st.selectbox("Gender", ["Men", "Women", "Other"])
         age = st.slider("Age", 1, 100, 25)
         body_shape = st.selectbox("Body Shape", ["Slim", "Regular", "Curvy"])
-        favorite_color = st.text_input("🎨 Favorite Color (e.g., black, pink)")
+        favorite_color = st.text_input("Favorite Color (e.g., black, pink)")
         draw_style = st.selectbox("Drawing Style", ["Disney", "American Comic", "Japanese Anime", "3D CG"])
-        fashion_theme = st.text_input("🎝️ Fashion Theme (e.g., spring, bright)")
+        fashion_theme = st.text_input("Fashion Theme (e.g., spring, bright)")
         submitted = st.form_submit_button("✨ Generate AI Coordination")
 
     if submitted and uploaded_image:
@@ -163,7 +163,7 @@ with tab1:
             "likes": 0
         })
 
-        st.subheader("🧐 Items Recommendation")
+        st.subheader("🛒 Your Recommended Items")
         user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
         try:
             similar = recommend_from_embedded_json(user_profile, top_k=3)
@@ -184,7 +184,7 @@ with tab2:
     posts = load_posts()
     top_posts = sorted(posts, key=lambda x: x["likes"], reverse=True)[:5]
     if top_posts:
-        st.subheader("🍭 Recommended Products")
+        st.subheader("🌟 Popular Coordinations")
         for i, post in enumerate(top_posts):
             with st.container():
                 st.markdown(f"### #{i+1} ❤️ {post['likes']} Likes")
@@ -199,7 +199,7 @@ with tab2:
                     st.markdown(f"**🎞️ Style:** {post['style']}")
     st.markdown("---")
 
-    st.subheader("🧑‍🧑‍🧑 All Community Posts")
+    st.subheader("🖼️ All Community Looks")
     for post in reversed(posts[:20]):
         with st.container():
             col1, col2 = st.columns([1, 2])
