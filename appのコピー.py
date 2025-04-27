@@ -88,7 +88,7 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
     scores = np.dot(all_vectors, embedding) / (
         np.linalg.norm(all_vectors, axis=1) * np.linalg.norm(embedding) + 1e-5
     )
-    for i, score in enumerate(scores:
+    for i, score in enumerate(scores):
         filtered_items[i]["score"] = score
 
     top_items = sorted(filtered_items, key=lambda x: x["score"], reverse=True)[:top_k]
@@ -127,22 +127,19 @@ with tab1:
         submitted = st.form_submit_button("✨ Generate AI Coordination")
 
     if submitted and uploaded_image:
-        # --- Initial Coordination Generation ---
         image = Image.open(uploaded_image)
         buffered = BytesIO()
         image.save(buffered, format="PNG")
         image_url = None
-        original_prompt = (
-            f"Full-body anime-style fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
-            f"wearing seasonally appropriate, modest, fashionable clothing in {favorite_color} color, themed around {fashion_theme}. "
-            f"The outfit should cover chest, abdomen and knees, avoid revealing skin, and reflect elegance. "
-            f"Style: {draw_style}. White background."
-        )
-
         try:
             response = client.images.generate(
                 model="dall-e-3",
-                prompt=original_prompt,
+                prompt=(
+                    f"Full-body anime-style fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
+                    f"wearing seasonally appropriate, modest, fashionable clothing in {favorite_color} color, themed around {fashion_theme}. "
+                    f"The outfit should cover chest, abdomen and knees, avoid revealing skin, and reflect elegance. "
+                    f"Style: {draw_style}. White background."
+                ),
                 size="1024x1024",
                 quality="standard",
                 n=1
@@ -172,38 +169,6 @@ with tab1:
             "likes": 0
         })
 
-        # --- User Feedback Refinement ---
-        st.markdown("### 🎨 Want to adjust the coordination?")
-        user_feedback = st.text_input("💬 Tell us your preference (e.g., 'Make it more casual', 'Use brighter colors')")
-
-        if st.button("🔄 Update Coordination with Your Feedback"):
-            with st.spinner("Updating your coordination..."):
-                try:
-                    refinement_prompt = client.chat.completions.create(
-                        model="gpt-4o",
-                        messages=[
-                            {"role": "system", "content": "You are a prompt engineer specializing in improving fashion illustration prompts for DALL-E 3."},
-                            {"role": "user", "content": f"The original prompt was:\n{original_prompt}\n\nUser feedback is:\n{user_feedback}\n\nPlease refine the prompt accordingly."}
-                        ],
-                        temperature=0.2
-                    ).choices[0].message.content.strip()
-
-                    refined_response = client.images.generate(
-                        model="dall-e-3",
-                        prompt=refinement_prompt,
-                        size="1024x1024",
-                        quality="standard",
-                        n=1
-                    )
-                    refined_image_url = refined_response.data[0].url
-
-                    st.image(refined_image_url, caption="🎨 Refined AI Coordination Suggestion", width=600)
-                    st.success("Here’s your updated coordination based on your feedback!")
-
-                except Exception as e:
-                    st.error("Failed to update coordination.")
-                    st.exception(e)
-
         st.subheader("🛒 Your Recommended Items")
         user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
         try:
@@ -219,7 +184,6 @@ with tab1:
                     st.markdown(f"**{item['productDisplayName']}**\n{item['gender']}, {item['baseColour']}\n{item['season']} / {item['usage']}")
                     if st.button("🛒 Go to EC Site", key=f"ec_button_{item['id']}"):
                         st.info("This would navigate to the EC site.")
-
         except Exception as e:
             st.error("Recommendation failed")
             st.exception(e)
@@ -239,7 +203,7 @@ with tab2:
                     st.markdown(f"**🧵 Theme:** {post['theme']}")
                     st.markdown(f"**🌍 Country:** {post['country']}")
                     st.markdown(f"**👤 Gender:** {post['gender']} / 🎂 Age: {post['age']}")
-                    st.markdown(f"**💪 Body Shape:** {post['body_shape']} / 🎨 Color:** {post['color']}")
+                    st.markdown(f"**💪 Body Shape:** {post['body_shape']} / 🎨 Color: {post['color']}")
                     st.markdown(f"**🎞️ Style:** {post['style']}")
     st.markdown("---")
 
@@ -253,7 +217,7 @@ with tab2:
                 st.markdown(f"**🧵 Theme:** {post['theme']}")
                 st.markdown(f"**🌍 Country:** {post['country']}")
                 st.markdown(f"**👤 Gender:** {post['gender']} / 🎂 Age: {post['age']}")
-                st.markdown(f"**💪 Body Shape:** {post['body_shape']} / 🎨 Color:** {post['color']}")
+                st.markdown(f"**💪 Body Shape:** {post['body_shape']} / 🎨 Color: {post['color']}")
                 st.markdown(f"**🎞️ Style:** {post['style']}")
                 st.markdown(f"❤️ {post['likes']} likes")
                 if st.button("👍 Like", key=post["id"]):
