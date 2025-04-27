@@ -1,8 +1,6 @@
 import streamlit as st
 import json
 import numpy as np
-import pandas as pd
-import ast
 from openai import OpenAI
 from typing import List, Dict
 from PIL import Image
@@ -41,7 +39,7 @@ def like_post(post_id):
     with open(POSTS_FILE, "w") as f:
         json.dump(st.session_state["posts"], f, indent=2)
 
-# --- 類似検索 ---
+# --- Embedding and Recommendation Functions ---
 def get_embedding_3small(text: str, api_key: str):
     url = "https://api.openai.com/v1/embeddings"
     headers = {
@@ -71,7 +69,6 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
         if normalized_color == k:
             expanded_colors += v
 
-    # 事前フィルタ
     filtered_items = [
         item for item in items
         if item["gender"].lower() == user_profile["gender"].lower()
@@ -97,6 +94,21 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
     top_items = sorted(filtered_items, key=lambda x: x["score"], reverse=True)[:top_k]
     return top_items
 
+# --- GPT Short Recommendation ---
+def generate_simple_recommendation(items: List[Dict]):
+    item_descriptions = "\n".join([f"{item['productDisplayName']} ({item['baseColour']}, {item['season']})" for item in items])
+    prompt = f"Recommend outfits based on the following items briefly (within 2 lines):\n{item_descriptions}"
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a fashion assistant. Respond very briefly within 2 lines."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3
+    )
+    return response.choices[0].message.content.strip()
+
 # --- UI Layout ---
 tab1, tab2 = st.tabs(["🧐 AI Coordinator", "🌐 Community Gallery"])
 
@@ -111,7 +123,7 @@ with tab1:
         body_shape = st.selectbox("Body Shape", ["Slim", "Regular", "Curvy"])
         favorite_color = st.text_input("🎨 Favorite Color (e.g., black, pink)")
         draw_style = st.selectbox("Drawing Style", ["Disney", "American Comic", "Japanese Anime", "3D CG"])
-        fashion_theme = st.text_input("🎭 Fashion Theme (e.g., spring, bright)")
+        fashion_theme = st.text_input("🎝️ Fashion Theme (e.g., spring, bright)")
         submitted = st.form_submit_button("✨ Generate AI Coordination")
 
     if submitted and uploaded_image:
@@ -123,11 +135,11 @@ with tab1:
             response = client.images.generate(
                 model="dall-e-3",
                 prompt=(
-    f"Full-body anime-style fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
-    f"wearing seasonally appropriate, modest, fashionable clothing in {favorite_color} color, themed around {fashion_theme}. "
-    f"The outfit should cover chest, abdomen and knees, avoid revealing skin, and reflect elegance. "
-    f"Style: {draw_style}. White background."
-),
+                    f"Full-body anime-style fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
+                    f"wearing seasonally appropriate, modest, fashionable clothing in {favorite_color} color, themed around {fashion_theme}. "
+                    f"The outfit should cover chest, abdomen and knees, avoid revealing skin, and reflect elegance. "
+                    f"Style: {draw_style}. White background."
+                ),
                 size="1024x1024",
                 quality="standard",
                 n=1
@@ -151,10 +163,13 @@ with tab1:
             "likes": 0
         })
 
-        st.subheader("🧠 Similar Items Recommendation")
+        st.subheader("🧐 Items Recommendation")
         user_profile = {"gender": gender, "theme": fashion_theme, "color": favorite_color}
         try:
             similar = recommend_from_embedded_json(user_profile, top_k=3)
+            gpt_recommendation = generate_simple_recommendation(similar)
+            st.info(gpt_recommendation)
+
             cols = st.columns(3)
             for i, item in enumerate(similar):
                 with cols[i % 3]:
@@ -184,7 +199,7 @@ with tab2:
                     st.markdown(f"**🎞️ Style:** {post['style']}")
     st.markdown("---")
 
-    st.subheader("🧑‍🤝‍🧑 All Community Posts")
+    st.subheader("🧑‍🧑‍🧑 All Community Posts")
     for post in reversed(posts[:20]):
         with st.container():
             col1, col2 = st.columns([1, 2])
@@ -199,4 +214,4 @@ with tab2:
                 st.markdown(f"❤️ {post['likes']} likes")
                 if st.button("👍 Like", key=post["id"]):
                     like_post(post["id"])
-                    st.experimental_rerun()
+                    st.rerun()
