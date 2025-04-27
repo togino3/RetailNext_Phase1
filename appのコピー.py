@@ -74,12 +74,21 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
         if normalized_color == k:
             expanded_colors += v
 
+    # --- まず厳しくフィルタリング ---
     filtered_items = [
         item for item in items
         if item["gender"].lower() == user_profile["gender"].lower()
         and any(c in item["baseColour"].lower() for c in expanded_colors)
     ]
 
+    # --- ヒットしなければgenderだけに緩める ---
+    if not filtered_items:
+        filtered_items = [
+            item for item in items
+            if item["gender"].lower() == user_profile["gender"].lower()
+        ]
+
+    # --- それでもヒットしなければ全商品対象にする ---
     if not filtered_items:
         filtered_items = items
 
@@ -100,6 +109,7 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
 
     top_items = sorted(filtered_items, key=lambda x: x["score"], reverse=True)[:top_k]
     return top_items
+
 
 
 
