@@ -145,7 +145,7 @@ with tab1:
                 n=1
             )
             image_url = response.data[0].url
-            st.image(image_url, caption="👕 AI Coordination Suggestion", width=300)
+            st.image(image_url, caption="👕 AI Coordination Suggestion", width=600)
             st.markdown("🔗 **Share on SNS：** [Share on SNS](https://dummy-share-url.com)")
             st.info(
                 "📢 The generated coordination will also be shared in the Community Gallery.\n\n"
@@ -198,7 +198,7 @@ with tab2:
                 st.markdown(f"### #{i+1} ❤️ {post['likes']} Likes")
                 col1, col2 = st.columns([1, 2])
                 with col1:
-                    st.image(post["image_url"], width=150)
+                    st.image(post["image_url"], width=300)
                 with col2:
                     st.markdown(f"**🧵 Theme:** {post['theme']}")
                     st.markdown(f"**🌍 Country:** {post['country']}")
@@ -212,7 +212,7 @@ with tab2:
         with st.container():
             col1, col2 = st.columns([1, 2])
             with col1:
-                st.image(post["image_url"], width=150)
+                st.image(post["image_url"], width=300)
             with col2:
                 st.markdown(f"**🧵 Theme:** {post['theme']}")
                 st.markdown(f"**🌍 Country:** {post['country']}")
