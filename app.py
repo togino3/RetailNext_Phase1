@@ -125,7 +125,7 @@ with tab1:
                 prompt=(
     f"Full-body anime-style fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
     f"wearing seasonally appropriate, modest, fashionable clothing in {favorite_color} color, themed around {fashion_theme}. "
-    f"The outfit should cover shoulders and knees, avoid revealing skin, and reflect elegance. "
+    f"The outfit should cover chest, abdomen and knees, avoid revealing skin, and reflect elegance. "
     f"Style: {draw_style}. White background."
 ),
                 size="1024x1024",
