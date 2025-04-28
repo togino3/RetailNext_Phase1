@@ -58,6 +58,7 @@ def get_embedding_3small(text: str, api_key: str):
     response.raise_for_status()
     return np.array(response.json()["data"][0]["embedding"], dtype=np.float32)
 
+
 def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
     with open(EMBEDDED_JSON_FILE, "r") as f:
         items = json.load(f)
@@ -74,21 +75,18 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
         if normalized_color == k:
             expanded_colors += v
 
-    # --- まず厳しくフィルタリング ---
     filtered_items = [
         item for item in items
         if item["gender"].lower() == user_profile["gender"].lower()
         and any(c in item["baseColour"].lower() for c in expanded_colors)
     ]
 
-    # --- ヒットしなければgenderだけに緩める ---
     if not filtered_items:
         filtered_items = [
             item for item in items
             if item["gender"].lower() == user_profile["gender"].lower()
         ]
 
-    # --- それでもヒットしなければ全商品対象にする ---
     if not filtered_items:
         filtered_items = items
 
@@ -188,11 +186,13 @@ with tab1:
         buffered = BytesIO()
         image.save(buffered, format="PNG")
 
-        # --- DALL-E用プロンプト（露出防止ガード入り） ---
+
+
+        # --- DALL-E Prompt ---
         original_prompt = (
             f"Full-body fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
-            f"wearing seasonally appropriate, elegant, modest clothing in {favorite_color} color, themed around {fashion_theme}. "
-            "The outfit should cover chest, abdomen, and knees, avoiding revealing skin, and should reflect elegance. "
+            f"wearing seasonally appropriate, modest clothing in {favorite_color} color, themed around {fashion_theme}. "
+            "The outfit should cover chest, abdomen, and knees, avoiding revealing skin. "
             f"Style: {draw_style}. White background."
         )
 
@@ -239,7 +239,7 @@ with tab1:
                 "likes": 0
             })
 
-            # --- 初回レコメンド表示 ---
+            # --- Recommended Items ---
             st.subheader("🛒 Your Recommended Items")
             try:
                 similar = recommend_from_embedded_json(st.session_state["user_profile"], top_k=3)
