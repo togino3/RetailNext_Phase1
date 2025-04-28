@@ -191,8 +191,8 @@ with tab1:
         # --- DALL-E Prompt ---
         original_prompt = (
             f"Full-body fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
-            f"wearing seasonally appropriate, modest clothing in {favorite_color} color, themed around {fashion_theme}. "
-            "The outfit should cover chest, abdomen, and knees, avoiding revealing skin. "
+            f"wearing seasonally appropriate, clothing in {favorite_color} color, themed around {fashion_theme}. "
+            "The outfit must fully cover the chest, abdomen, and knees, with no exposed skin. Absolutely no sexualized or provocative elements should be included. Prioritize natural, modest fashion suitable for general audiences."
             f"Style: {draw_style}. White background."
         )
 
