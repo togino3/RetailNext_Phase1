@@ -192,10 +192,9 @@ with tab1:
         original_prompt = (
             f"Full-body fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
             f"wearing seasonally appropriate clothing in {favorite_color} color, themed around {fashion_theme}. "
-            "The outfit must fully cover the chest, abdomen, thighs, and knees, with no exposed skin. "
-           "Ensure the clothing is loose-fitting, modest, family-friendly, conservative, and elegant. "
-            "Strictly avoid any sexualized, suggestive, or provocative elements. "
-           f"Style: {draw_style}. White background. No background objects."
+            "The outfit should fully cover the chest, abdomen, thighs, and knees, ensuring a modest and elegant appearance. "
+            "Avoid any sexualized, provocative, or overly revealing designs. "
+            f"Art style: {draw_style}. Plain white background without any objects."
         )
 
         try:
