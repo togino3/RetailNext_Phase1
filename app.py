@@ -190,11 +190,10 @@ with tab1:
 
         # --- DALL-E Prompt ---
         original_prompt = (
-            f"Full-body fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
-            f"wearing seasonally appropriate clothing in {favorite_color} color, themed around {fashion_theme}. "
-            "The outfit should fully cover the chest, abdomen, thighs, and knees, ensuring a modest and elegant appearance. "
-            "Avoid any sexualized, provocative, or overly revealing designs. "
-            f"Art style: {draw_style}. Plain white background without any objects."
+          f"Full-body fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
+           f"dressed in seasonally appropriate, elegant, and modest clothing, "
+           f"in {favorite_color} color, inspired by {fashion_theme} style. "
+           f"Art style: {draw_style}. White background, no additional objects."
         )
 
         try:
