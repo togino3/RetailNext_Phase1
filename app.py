@@ -165,10 +165,10 @@ tab1, tab2 = st.tabs(["🛍️ RetailNext Coordinator", "🌐 Community Gallery"
 
 with tab1:
     st.subheader("🛍️ RetailNext Coordinator")
-    st.info("🔐 Uploaded images are not used for AI training and are automatically deleted after a short retention period to protect your privacy.")
 
     with st.form("✨ Personalize Your Look"):
         uploaded_image = st.file_uploader("Upload your face photo", type=["jpg", "jpeg", "png"])
+        st.caption("🔐 Uploaded images are not used for AI training and are automatically deleted after a short retention period to protect your privacy.")
         country = st.text_input("Country (e.g., USA, Japan, etc.)")
         gender = st.selectbox("Gender", ["Men", "Women", "Other"])
         age = st.slider("Age", 1, 100, 25)
