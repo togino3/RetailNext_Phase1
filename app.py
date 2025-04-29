@@ -274,7 +274,7 @@ if "original_prompt" in st.session_state:
         else:
             with st.spinner("Updating your coordination..."):
                 try:
-                    # GPT-4oでリファインプロンプト作成
+                    # GPT-4o Refinement
                     refinement_prompt = client.chat.completions.create(
                         model="gpt-4o",
                         messages=[
@@ -284,7 +284,7 @@ if "original_prompt" in st.session_state:
                         temperature=0.2
                     ).choices[0].message.content.strip()
 
-                    # DALL-Eでリファイン後画像生成
+                    # DALL-E Refinement
                     refined_response = client.images.generate(
                         model="dall-e-3",
                         prompt=refinement_prompt,
@@ -294,11 +294,11 @@ if "original_prompt" in st.session_state:
                     )
                     refined_image_url = refined_response.data[0].url
 
-                    # 新しい画像表示
+                    # image output
                     st.image(refined_image_url, caption="🎨 Refined AI Coordination Suggestion", width=600)
                     st.success("Here’s your updated coordination based on your feedback!")
 
-                    # --- 🛒 Refinedレコメンド ---
+                    # --- 🛒 Refined Recommend ---
                     st.subheader("🛒 Updated Recommended Items")
 
                     updated_profile = update_profile_from_feedback(st.session_state["user_profile"].copy(), user_feedback)
