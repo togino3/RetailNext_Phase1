@@ -167,16 +167,16 @@ with tab1:
     st.subheader("🛍️ RetailNext Coordinator")
 
     with st.form("✨ Personalize Your Look"):
-        uploaded_image = st.file_uploader("Upload your face photo", type=["jpg", "jpeg", "png"])
+        uploaded_image = st.file_uploader("😊 Upload your face photo", type=["jpg", "jpeg", "png"])
         st.caption("🔐 Uploaded images are not used for AI training and are automatically deleted after a short retention period to protect your privacy.")
-        country = st.text_input("Country (e.g., USA, Japan, etc.)")
-        gender = st.selectbox("Gender", ["Men", "Women", "Other"])
-        age = st.slider("Age", 1, 100, 25)
-        body_shape = st.selectbox("Body Shape", ["Slim", "Regular", "Curvy"])
-        favorite_color = st.text_input("Favorite Color (e.g., black, pink)")
-        draw_style = st.selectbox("Drawing Style", ["Disney", "American Comic", "Japanese Anime", "3D CG"])
-        fashion_theme = st.text_input("Fashion Theme (e.g., spring, bright)")
-        submitted = st.form_submit_button("✨ Generate AI Coordination")
+        country = st.text_input("🌎 Country (e.g., USA, Japan, etc.)")
+        gender = st.selectbox("🌈 Gender", ["Men", "Women", "Other"])
+        age = st.slider("🎂 Age", 1, 100, 25)
+        body_shape = st.selectbox("👤 Body Shape", ["Slim", "Regular", "Curvy"])
+        favorite_color = st.text_input("🎨 Favorite Color (e.g., black, pink)")
+        draw_style = st.selectbox("🌠 Drawing Style", ["Disney", "American Comic", "Japanese Anime", "3D CG"])
+        fashion_theme = st.text_input("⭐️ Fashion Theme (e.g., spring, bright)")
+        submitted = st.form_submit_button("🧠 Generate AI Coordination")
 
     if submitted and uploaded_image:
         try:
@@ -262,7 +262,7 @@ with tab1:
 
 # --- Refinement Section ---
 if "original_prompt" in st.session_state:
-    st.markdown("### 🎨 Want to adjust the coordination?")
+    st.markdown("###💡 Want to adjust the coordination?")
     user_feedback = st.text_input("💬 Tell us your preference (e.g., 'Make it more casual', 'Use brighter colors')")
 
     if st.button("🔄 Update Coordination with Your Feedback"):
