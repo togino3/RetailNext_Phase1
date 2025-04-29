@@ -3,7 +3,7 @@ import json
 import numpy as np
 from openai import OpenAI
 from typing import List, Dict
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import requests
 from io import BytesIO
 import uuid
@@ -39,11 +39,7 @@ def like_post(post_id):
     with open(POSTS_FILE, "w") as f:
         json.dump(st.session_state["posts"], f, indent=2)
 
-
-
-
 # --- Embedding and Recommendation Functions ---
-
 def get_embedding_3small(text: str, api_key: str):
     url = "https://api.openai.com/v1/embeddings"
     headers = {
@@ -58,7 +54,6 @@ def get_embedding_3small(text: str, api_key: str):
     response.raise_for_status()
     return np.array(response.json()["data"][0]["embedding"], dtype=np.float32)
 
-
 def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
     with open(EMBEDDED_JSON_FILE, "r") as f:
         items = json.load(f)
@@ -71,6 +66,7 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
 
     normalized_color = user_profile["color"].lower()
     expanded_colors = [normalized_color]
+
     for k, v in color_map.items():
         if normalized_color == k:
             expanded_colors += v
@@ -169,6 +165,7 @@ tab1, tab2 = st.tabs(["🛍️ RetailNext Coordinator", "🌐 Community Gallery"
 
 with tab1:
     st.subheader("🛍️ RetailNext Coordinator")
+    st.info("🔐 Uploaded images are not used for AI training and are automatically deleted after a short retention period to protect your privacy.")
 
     with st.form("✨ Personalize Your Look"):
         uploaded_image = st.file_uploader("Upload your face photo", type=["jpg", "jpeg", "png"])
@@ -182,11 +179,11 @@ with tab1:
         submitted = st.form_submit_button("✨ Generate AI Coordination")
 
     if submitted and uploaded_image:
-        image = Image.open(uploaded_image)
-        buffered = BytesIO()
-        image.save(buffered, format="PNG")
-
-
+        try:
+            image = Image.open(uploaded_image)
+        except UnidentifiedImageError:
+            st.error("This image could not be read. Please upload a standard JPG or PNG.")
+            st.stop()
 
         # --- DALL-E Prompt ---
         original_prompt = (
