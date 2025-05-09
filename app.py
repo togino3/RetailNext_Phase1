@@ -195,7 +195,7 @@ with tab1:
 
         try:
             response = client.images.generate(
-                model="dall-e-3",
+                model="gpt-image-1",
                 prompt=original_prompt,
                 size="1024x1024",
                 quality="standard",
@@ -283,7 +283,7 @@ if "original_prompt" in st.session_state:
 
                     # DALL-E Refinement
                     refined_response = client.images.generate(
-                        model="dall-e-3",
+                        model="gpt-image-1",
                         prompt=refinement_prompt,
                         size="1024x1024",
                         quality="standard",
