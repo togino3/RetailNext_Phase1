@@ -121,7 +121,6 @@ def update_profile_from_feedback(user_profile: Dict, user_feedback: str) -> Dict
 
     return updated
 
-# --- UI Layout ---
 tab1, tab2 = st.tabs(["🛍️ RetailNext Coordinator", "🌐 Community Gallery"])
 
 with tab1:
@@ -176,6 +175,20 @@ with tab1:
 
             st.image(image_url, caption="👕 AI Coordination Suggestion", width=600)
 
+            st.subheader("🛒 Your Recommended Items")
+            similar = recommend_from_embedded_json(st.session_state["pending_share_post"], top_k=3)
+            gpt_recommendation = generate_simple_recommendation(similar)
+            st.info(gpt_recommendation)
+
+            cols = st.columns(3)
+            for i, item in enumerate(similar):
+                with cols[i % 3]:
+                    item_image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
+                    st.image(item_image_url, width=200)
+                    st.markdown(f"**{item['productDisplayName']}**\n{item['gender']}, {item['baseColour']}\n{item['season']} / {item['usage']}")
+                    if st.button("🛒 Go to EC Site", key=f"initial_ec_button_{item['id']}"):
+                        st.info("This would navigate to the EC site.")
+
         except Exception as e:
             st.error("Image generation failed")
             st.exception(e)
@@ -194,58 +207,55 @@ with tab1:
             if not user_feedback.strip():
                 st.warning("⚠️ Please enter your feedback before updating the coordination.")
             else:
-                if "pending_share_post" not in st.session_state:
-                    st.warning("⚠️ No existing coordination to update.")
-                else:
-                    with st.spinner("Updating your coordination..."):
-                        try:
-                            refinement_prompt = client.chat.completions.create(
-                                model="gpt-4o",
-                                messages=[
-                                    {"role": "system", "content": "You are a prompt engineer specializing in improving fashion illustration prompts for DALL-E 3 while maintaining elegance and modesty."},
-                                    {"role": "user", "content": f"The original prompt was:\n{st.session_state['original_prompt']}\n\nUser feedback is:\n{user_feedback}\n\nPlease refine the prompt while still keeping it modest, elegant, and non-revealing."}
-                                ],
-                                temperature=0.2
-                            ).choices[0].message.content.strip()
+                with st.spinner("Updating your coordination..."):
+                    try:
+                        refinement_prompt = client.chat.completions.create(
+                            model="gpt-4o",
+                            messages=[
+                                {"role": "system", "content": "You are a prompt engineer specializing in improving fashion illustration prompts for DALL-E 3 while maintaining elegance and modesty."},
+                                {"role": "user", "content": f"The original prompt was:\n{st.session_state['original_prompt']}\n\nUser feedback is:\n{user_feedback}\n\nPlease refine the prompt while still keeping it modest, elegant, and non-revealing."}
+                            ],
+                            temperature=0.2
+                        ).choices[0].message.content.strip()
 
-                            refined_response = client.images.generate(
-                                model="dall-e-3",
-                                prompt=refinement_prompt,
-                                size="1024x1024",
-                                quality="standard",
-                                n=1
-                            )
-                            refined_image_url = refined_response.data[0].url
+                        refined_response = client.images.generate(
+                            model="dall-e-3",
+                            prompt=refinement_prompt,
+                            size="1024x1024",
+                            quality="standard",
+                            n=1
+                        )
+                        refined_image_url = refined_response.data[0].url
 
-                            updated_profile = update_profile_from_feedback(st.session_state["pending_share_post"].copy(), user_feedback)
-                            st.session_state["pending_share_post"].update({
-                                "id": str(uuid.uuid4()),
-                                "image_url": refined_image_url,
-                                "body_shape": updated_profile.get("body_shape", st.session_state["pending_share_post"].get("body_shape")),
-                                "color": updated_profile.get("color", st.session_state["pending_share_post"].get("color")),
-                                "theme": updated_profile.get("theme", st.session_state["pending_share_post"].get("theme")),
-                                "style": updated_profile.get("draw_style", st.session_state["pending_share_post"].get("style"))
-                            })
+                        updated_profile = update_profile_from_feedback(st.session_state["pending_share_post"], user_feedback)
+                        st.session_state["pending_share_post"].update({
+                            "id": str(uuid.uuid4()),
+                            "image_url": refined_image_url,
+                            "body_shape": updated_profile.get("body_shape"),
+                            "color": updated_profile.get("color"),
+                            "theme": updated_profile.get("theme"),
+                            "style": updated_profile.get("draw_style")
+                        })
 
-                            st.image(refined_image_url, caption="🎨 Refined AI Coordination Suggestion", width=600)
+                        st.image(refined_image_url, caption="🎨 Refined AI Coordination Suggestion", width=600)
 
-                            st.subheader("🛒 Updated Recommended Items")
-                            refined_items = recommend_from_embedded_json(updated_profile, top_k=3)
-                            refined_recommendation = generate_simple_recommendation(refined_items)
-                            st.info(refined_recommendation)
+                        st.subheader("🛒 Updated Recommended Items")
+                        refined_items = recommend_from_embedded_json(updated_profile, top_k=3)
+                        refined_recommendation = generate_simple_recommendation(refined_items)
+                        st.info(refined_recommendation)
 
-                            cols = st.columns(3)
-                            for i, item in enumerate(refined_items):
-                                with cols[i % 3]:
-                                    item_image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
-                                    st.image(item_image_url, width=200)
-                                    st.markdown(f"**{item['productDisplayName']}**\n{item['gender']}, {item['baseColour']}\n{item['season']} / {item['usage']}")
-                                    if st.button("🛒 Go to EC Site", key=f"refined_ec_button_{item['id']}"):
-                                        st.info("This would navigate to the EC site.")
+                        cols = st.columns(3)
+                        for i, item in enumerate(refined_items):
+                            with cols[i % 3]:
+                                item_image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
+                                st.image(item_image_url, width=200)
+                                st.markdown(f"**{item['productDisplayName']}**\n{item['gender']}, {item['baseColour']}\n{item['season']} / {item['usage']}")
+                                if st.button("🛒 Go to EC Site", key=f"refined_ec_button_{item['id']}"):
+                                    st.info("This would navigate to the EC site.")
 
-                        except Exception as e:
-                            st.error("Failed to update coordination.")
-                            st.exception(e)
+                    except Exception as e:
+                        st.error("Failed to update coordination.")
+                        st.exception(e)
 
 with tab2:
     posts = load_posts()
