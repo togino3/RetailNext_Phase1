@@ -213,7 +213,7 @@ with tab1:
 
     # --- Refinement Section ---
     if "original_prompt" in st.session_state:
-        st.markdown("###💡 Want to adjust the coordination?")
+        st.markdown("💡 Want to adjust the coordination?")
         user_feedback = st.text_input("💬 Tell us your preference (e.g., 'Make it more casual', 'Use brighter colors')")
 
         if st.button("🔄 Update Coordination with Your Feedback"):
