@@ -131,7 +131,7 @@ def generate_simple_recommendation(items: List[Dict]):
 def update_profile_from_feedback(user_profile: Dict, user_feedback: str) -> Dict:
     color_keywords = ["red", "blue", "black", "white", "pink", "yellow", "green", "purple", "grey", "gray", "orange", "navy"]
     body_shape_keywords = ["slim", "curvy", "regular"]
-    draw_style_keywords = ["disney", "american comic", "japanese anime", "3d cg"]
+    draw_style_keywords = ["disney", "american comic", "japanese anime", "ghibli", "3d cg"]
     theme_keywords = ["casual", "formal", "street", "vintage", "business", "sporty", "luxury"]
 
     feedback_lower = user_feedback.lower()
@@ -174,7 +174,7 @@ with tab1:
         age = st.slider("🎂 Age", 1, 100, 25)
         body_shape = st.selectbox("👤 Body Shape", ["Slim", "Regular", "Curvy"])
         favorite_color = st.text_input("🎨 Favorite Color (e.g., black, pink)")
-        draw_style = st.selectbox("🌠 Drawing Style", ["Disney", "American Comic", "Japanese Anime", "3D CG"])
+        draw_style = st.selectbox("🌠 Drawing Style", ["Disney", "American Comic", "Japanese Anime", "Ghibli", "3D CG"])
         fashion_theme = st.text_input("⭐️ Fashion Theme (e.g., spring, bright)")
         submitted = st.form_submit_button("🧠 Generate AI Coordination")
 
@@ -198,7 +198,7 @@ with tab1:
                 model="gpt-image-1",
                 prompt=original_prompt,
                 size="1024x1024",
-                quality="standard",
+                quality="auto",
                 n=1
             )
             image_url = response.data[0].url
@@ -286,7 +286,7 @@ if "original_prompt" in st.session_state:
                         model="gpt-image-1",
                         prompt=refinement_prompt,
                         size="1024x1024",
-                        quality="standard",
+                        quality="auto",
                         n=1
                     )
                     refined_image_url = refined_response.data[0].url
