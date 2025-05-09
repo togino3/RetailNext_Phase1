@@ -16,7 +16,6 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 POSTS_FILE = "posts.json"
 EMBEDDED_JSON_FILE = "embedded_products.json"
 
-# --- Post Management ---
 if "posts" not in st.session_state:
     if os.path.exists(POSTS_FILE):
         with open(POSTS_FILE, "r") as f:
@@ -39,7 +38,6 @@ def like_post(post_id):
     with open(POSTS_FILE, "w") as f:
         json.dump(st.session_state["posts"], f, indent=2)
 
-# --- Embedding and Recommendation Functions ---
 def get_embedding_3small(text: str, api_key: str):
     url = "https://api.openai.com/v1/embeddings"
     headers = {
@@ -78,21 +76,14 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
     ]
 
     if not filtered_items:
-        filtered_items = [
-            item for item in items
-            if item["gender"].lower() == user_profile["gender"].lower()
-        ]
+        filtered_items = [item for item in items if item["gender"].lower() == user_profile["gender"].lower()]
 
     if not filtered_items:
         filtered_items = items
 
-    query_text = (
-        f"{user_profile['theme']} fashion for {user_profile['gender']}, "
-        f"color: {user_profile['color']}"
-    )
+    query_text = f"{user_profile['theme']} fashion for {user_profile['gender']}, color: {user_profile['color']}"
 
     embedding = get_embedding_3small(query_text, st.secrets["OPENAI_API_KEY"])
-
     all_vectors = np.array([item["embedding"] for item in filtered_items], dtype=np.float32)
     scores = np.dot(all_vectors, embedding) / (
         np.linalg.norm(all_vectors, axis=1) * np.linalg.norm(embedding) + 1e-5
@@ -103,11 +94,6 @@ def recommend_from_embedded_json(user_profile: Dict, top_k: int = 3):
 
     top_items = sorted(filtered_items, key=lambda x: x["score"], reverse=True)[:top_k]
     return top_items
-
-
-
-
-# --- GPT Short Recommendation ---
 
 def generate_simple_recommendation(items: List[Dict]):
     item_descriptions = "\n".join([
@@ -125,8 +111,6 @@ def generate_simple_recommendation(items: List[Dict]):
         temperature=0.3
     )
     return response.choices[0].message.content.strip()
-
-# --- Refinement Profile Update ---
 
 def update_profile_from_feedback(user_profile: Dict, user_feedback: str) -> Dict:
     color_keywords = ["red", "blue", "black", "white", "pink", "yellow", "green", "purple", "grey", "gray", "orange", "navy"]
@@ -158,8 +142,6 @@ def update_profile_from_feedback(user_profile: Dict, user_feedback: str) -> Dict
 
     return user_profile
 
-
-
 # --- UI Layout ---
 tab1, tab2 = st.tabs(["🛍️ RetailNext Coordinator", "🌐 Community Gallery"])
 
@@ -185,12 +167,11 @@ with tab1:
             st.error("This image could not be read. Please upload a standard JPG or PNG.")
             st.stop()
 
-        # --- DALL-E Prompt ---
         original_prompt = (
-          f"Full-body fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
-           f"dressed in seasonally appropriate, elegant, and modest clothing, "
-           f"in {favorite_color} color, inspired by {fashion_theme} style. "
-           f"Art style: {draw_style}. White background, no additional objects."
+            f"Full-body fashion illustration of a {gender}, age {age}, body shape {body_shape}, "
+            f"dressed in seasonally appropriate, elegant, and modest clothing, "
+            f"in {favorite_color} color, inspired by {fashion_theme} style. "
+            f"Art style: {draw_style}. White background, no additional objects."
         )
 
         try:
@@ -203,27 +184,8 @@ with tab1:
             )
             image_url = response.data[0].url
 
-            # セッション保存
             st.session_state["original_prompt"] = original_prompt
-            st.session_state["original_image_url"] = image_url
-            st.session_state["user_profile"] = {
-                "gender": gender,
-                "theme": fashion_theme,
-                "color": favorite_color,
-                "body_shape": body_shape,
-                "draw_style": draw_style
-            }
-
-            # 画像表示
-            st.image(image_url, caption="👕 AI Coordination Suggestion", width=600)
-            st.markdown("🔗 **Share on SNS：** [Share on SNS](https://dummy-share-url.com)")
-            st.info(
-                "📢 The generated coordination will also be shared in the Community Gallery.\n\n"
-                "Click on your favorite image to view related recommended items!"
-            )
-
-            # 投稿保存
-            save_post({
+            st.session_state["pending_share_post"] = {
                 "id": str(uuid.uuid4()),
                 "image_url": image_url if image_url else "N/A",
                 "country": country,
@@ -234,91 +196,80 @@ with tab1:
                 "theme": fashion_theme,
                 "style": draw_style,
                 "likes": 0
-            })
+            }
 
-            # --- Recommended Items ---
-            st.subheader("🛒 Your Recommended Items")
-            try:
-                similar = recommend_from_embedded_json(st.session_state["user_profile"], top_k=3)
-                gpt_recommendation = generate_simple_recommendation(similar)
-                st.info(gpt_recommendation)
-
-                cols = st.columns(3)
-                for i, item in enumerate(similar):
-                    with cols[i % 3]:
-                        item_image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
-                        st.image(item_image_url, width=200)
-                        st.markdown(f"**{item['productDisplayName']}**\n{item['gender']}, {item['baseColour']}\n{item['season']} / {item['usage']}")
-                        if st.button("🛒 Go to EC Site", key=f"ec_button_{item['id']}"):
-                            st.info("This would navigate to the EC site.")
-            except Exception as e:
-                st.error("Failed to recommend similar items.")
-                st.exception(e)
+            st.image(image_url, caption="👕 AI Coordination Suggestion", width=600)
 
         except Exception as e:
             st.error("Image generation failed")
             st.exception(e)
 
+    # Share Button (appears if there's something to share)
+    if "pending_share_post" in st.session_state:
+        if st.button("🔗 Share This Coordination to Community Gallery"):
+            save_post(st.session_state["pending_share_post"])
+            st.success("✅ Your coordination has been shared to the Community Gallery!")
+            del st.session_state["pending_share_post"]
 
-# --- Refinement Section ---
-if "original_prompt" in st.session_state:
-    st.markdown("###💡 Want to adjust the coordination?")
-    user_feedback = st.text_input("💬 Tell us your preference (e.g., 'Make it more casual', 'Use brighter colors')")
+    # --- Refinement Section ---
+    if "original_prompt" in st.session_state:
+        st.markdown("###💡 Want to adjust the coordination?")
+        user_feedback = st.text_input("💬 Tell us your preference (e.g., 'Make it more casual', 'Use brighter colors')")
 
-    if st.button("🔄 Update Coordination with Your Feedback"):
-        if not user_feedback.strip():
-            st.warning("⚠️ Please enter your feedback before updating the coordination.")
-        else:
-            with st.spinner("Updating your coordination..."):
-                try:
-                    # GPT-4o Refinement
-                    refinement_prompt = client.chat.completions.create(
-                        model="gpt-4o",
-                        messages=[
-                            {"role": "system", "content": "You are a prompt engineer specializing in improving fashion illustration prompts for DALL-E 3 while maintaining elegance and modesty."},
-                            {"role": "user", "content": f"The original prompt was:\n{st.session_state['original_prompt']}\n\nUser feedback is:\n{user_feedback}\n\nPlease refine the prompt while still keeping it modest, elegant, and non-revealing."}
-                        ],
-                        temperature=0.2
-                    ).choices[0].message.content.strip()
+        if st.button("🔄 Update Coordination with Your Feedback"):
+            if not user_feedback.strip():
+                st.warning("⚠️ Please enter your feedback before updating the coordination.")
+            else:
+                with st.spinner("Updating your coordination..."):
+                    try:
+                        refinement_prompt = client.chat.completions.create(
+                            model="gpt-4o",
+                            messages=[
+                                {"role": "system", "content": "You are a prompt engineer specializing in improving fashion illustration prompts for DALL-E 3 while maintaining elegance and modesty."},
+                                {"role": "user", "content": f"The original prompt was:\n{st.session_state['original_prompt']}\n\nUser feedback is:\n{user_feedback}\n\nPlease refine the prompt while still keeping it modest, elegant, and non-revealing."}
+                            ],
+                            temperature=0.2
+                        ).choices[0].message.content.strip()
 
-                    # DALL-E Refinement
-                    refined_response = client.images.generate(
-                        model="dall-e-3",
-                        prompt=refinement_prompt,
-                        size="1024x1024",
-                        quality="standard",
-                        n=1
-                    )
-                    refined_image_url = refined_response.data[0].url
+                        refined_response = client.images.generate(
+                            model="dall-e-3",
+                            prompt=refinement_prompt,
+                            size="1024x1024",
+                            quality="standard",
+                            n=1
+                        )
+                        refined_image_url = refined_response.data[0].url
 
-                    # image output
-                    st.image(refined_image_url, caption="🎨 Refined AI Coordination Suggestion", width=600)
-                    st.success("Here’s your updated coordination based on your feedback!")
+                        updated_profile = update_profile_from_feedback(st.session_state["pending_share_post"].copy(), user_feedback)
+                        st.session_state["pending_share_post"].update({
+                            "id": str(uuid.uuid4()),
+                            "image_url": refined_image_url if refined_image_url else "N/A",
+                            "body_shape": updated_profile["body_shape"],
+                            "color": updated_profile["color"],
+                            "theme": updated_profile["theme"],
+                            "style": updated_profile["draw_style"]
+                        })
 
-                    # --- 🛒 Refined Recommend ---
-                    st.subheader("🛒 Updated Recommended Items")
+                        st.image(refined_image_url, caption="🎨 Refined AI Coordination Suggestion", width=600)
 
-                    updated_profile = update_profile_from_feedback(st.session_state["user_profile"].copy(), user_feedback)
-                    st.session_state["user_profile"] = updated_profile
-                    refined_items = recommend_from_embedded_json(updated_profile, top_k=3)
-                    refined_recommendation = generate_simple_recommendation(refined_items)
-                    st.info(refined_recommendation)
+                        # --- 🛒 Refined Recommend ---
+                        st.subheader("🛒 Updated Recommended Items")
+                        refined_items = recommend_from_embedded_json(updated_profile, top_k=3)
+                        refined_recommendation = generate_simple_recommendation(refined_items)
+                        st.info(refined_recommendation)
 
-                    cols = st.columns(3)
-                    for i, item in enumerate(refined_items):
-                        with cols[i % 3]:
-                            item_image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
-                            st.image(item_image_url, width=200)
-                            st.markdown(f"**{item['productDisplayName']}**\n{item['gender']}, {item['baseColour']}\n{item['season']} / {item['usage']}")
-                            if st.button("🛒 Go to EC Site", key=f"refined_ec_button_{item['id']}"):
-                                st.info("This would navigate to the EC site.")
+                        cols = st.columns(3)
+                        for i, item in enumerate(refined_items):
+                            with cols[i % 3]:
+                                item_image_url = f"https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/data/sample_clothes/sample_images/{item['id']}.jpg"
+                                st.image(item_image_url, width=200)
+                                st.markdown(f"**{item['productDisplayName']}**\n{item['gender']}, {item['baseColour']}\n{item['season']} / {item['usage']}")
+                                if st.button("🛒 Go to EC Site", key=f"refined_ec_button_{item['id']}"):
+                                    st.info("This would navigate to the EC site.")
 
-                except Exception as e:
-                    st.error("Failed to update coordination.")
-                    st.exception(e)
-
-
-
+                    except Exception as e:
+                        st.error("Failed to update coordination.")
+                        st.exception(e)
 
 with tab2:
     posts = load_posts()
@@ -352,7 +303,6 @@ with tab2:
                 st.markdown(f"**🌍 Country:** {post['country']}")
                 st.markdown(f"**👤 Gender:** {post['gender']} / 🎂 Age: {post['age']}")
                 st.markdown(f"**💪 Body Shape:** {post['body_shape']} / 🎨 Color: {post['color']}")
-                st.markdown(f"**🎞️ Style:** {post['style']}")
                 st.markdown(f"❤️ {post['likes']} likes")
                 if st.button("👍 Like", key=post["id"]):
                     like_post(post["id"])
