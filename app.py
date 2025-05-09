@@ -204,22 +204,33 @@ with tab1:
             st.error("Image generation failed")
             st.exception(e)
 
-    # Share Button (appears if there's something to share)
     if "pending_share_post" in st.session_state:
         if st.button("🔗 Share This Coordination to Community Gallery"):
             save_post(st.session_state["pending_share_post"])
             st.success("✅ Your coordination has been shared to the Community Gallery!")
             del st.session_state["pending_share_post"]
 
-    # --- Refinement Section ---
     if "original_prompt" in st.session_state:
-        st.markdown("💡 Want to adjust the coordination?")
+        st.markdown("###💡 Want to adjust the coordination?")
         user_feedback = st.text_input("💬 Tell us your preference (e.g., 'Make it more casual', 'Use brighter colors')")
 
         if st.button("🔄 Update Coordination with Your Feedback"):
             if not user_feedback.strip():
                 st.warning("⚠️ Please enter your feedback before updating the coordination.")
             else:
+                if "pending_share_post" not in st.session_state:
+                    st.session_state["pending_share_post"] = {
+                        "id": str(uuid.uuid4()),
+                        "image_url": "",
+                        "country": country,
+                        "gender": gender,
+                        "age": age,
+                        "body_shape": body_shape,
+                        "color": favorite_color,
+                        "theme": fashion_theme,
+                        "style": draw_style,
+                        "likes": 0
+                    }
                 with st.spinner("Updating your coordination..."):
                     try:
                         refinement_prompt = client.chat.completions.create(
@@ -252,7 +263,6 @@ with tab1:
 
                         st.image(refined_image_url, caption="🎨 Refined AI Coordination Suggestion", width=600)
 
-                        # --- 🛒 Refined Recommend ---
                         st.subheader("🛒 Updated Recommended Items")
                         refined_items = recommend_from_embedded_json(updated_profile, top_k=3)
                         refined_recommendation = generate_simple_recommendation(refined_items)
